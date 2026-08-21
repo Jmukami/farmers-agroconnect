@@ -1,16 +1,60 @@
-# React + Vite
+# AgroConnect
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AgroConnect is a React web application that helps farmers discover agricultural inputs and begin the registration and ordering process from one place. The current frontend prototype includes farmer registration, a farm-input catalogue, a shopping cart, and checkout verification.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Register as a farmer with a name, phone number, location, and crop or livestock information.
+- Browse a catalogue of seeds, fertilizers, crop-protection products, animal-feed supplements, and irrigation equipment.
+- Add inputs to a cart and see the item count and total price in Kenyan shillings.
+- Submit an order through the checkout and verification flow.
+- Navigate between the Home, Register, and Farm Inputs views without a page reload.
 
-## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting Started
 
-## Expanding the ESLint configuration
+### Prerequisites
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Node.js 18 or newer
+- npm
+
+### Installation
+
+Clone the repository, move into the project directory, and install the dependencies:
+
+```bash
+git clone https://github.com/Jmukami/farmers-agroconnect.git
+cd farmers-agroconnect
+npm install
+```
+
+### Run the development server
+
+```bash
+npm run dev
+```
+
+## Project Structure
+
+```text
+src/
+├── App.jsx       # Navigation and view switching
+├── Home.jsx      # Landing view and primary actions
+├── Register.jsx  # Farmer registration form
+├── Inputs.jsx    # Product catalogue, cart, and checkout
+├── assets/       # Static frontend assets
+└── main.jsx      # React application entry point
+```
+
+## Team
+
+This project is maintained by Team 6:
+
+- Abelle Emmanuel
+- Mark Kage
+- Bruce Omondi
+- Jochebed Mukami
+
+Repository: [Jmukami/farmers-agroconnect](https://github.com/Jmukami/farmers-agroconnect)
+
+The team is working with Teams 5 and 7. AgroConnect is intended to consume Team 5's API and provide an API for Team 7 to consume as the project develops.

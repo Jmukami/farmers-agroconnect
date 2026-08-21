@@ -6,6 +6,9 @@
 - Bruce Omondi
 - Jochebed Mukami
 
+## Github Link
+https://github.com/Jmukami/farmers-agroconnect.git
+
 ## Project Information:
 AgroConnect is a web-based application that helps farmers access quality agricultural inputs, useful agrricultural services, and better farming opportunities. It allows farmers to register, and it provides a farm inputs sections where users can browse agricultural products. Users can then view these inputs in their shopping cart, view the number of items and then proceed to the checkout and verification stage.
 

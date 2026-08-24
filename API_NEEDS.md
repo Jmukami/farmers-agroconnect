@@ -8,5 +8,5 @@ Team 7 needs to read membership fee requirements and payment status in order to 
 Team 7 needs to read club membership meeting schedules and event days in order to display upcoming club activities on member calendars and prevent scheduling conflicts.
 Team 7 needs to read available farming products and catalog listings in order to allow agricultural club members to brows and orderfarm inputs or equipment directlythrough their app.
 
-Reflecttion:
+Reflection:
 During our patner interview with team 7, we saw how our two platforms can work together to serve agricultural clubs. By sharing data on aspiring farmers,meeting schedules, membership fees and farming products,we create a unified experience for users. It showed the importance of establishing clear data contracts early to ensure smooth crop-app intergration.

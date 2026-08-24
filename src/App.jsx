@@ -1,24 +1,25 @@
 import { useState } from 'react';
-import Home from './Home';
-import Register from './Register';
-import Inputs from './Inputs'; // Assuming your current page code is inside Inputs.jsx
+import './index.css';
+import AuthDialog from './components/AuthDialog';
+import AppShell from './components/AppShell';
+import CartPanel from './components/CartPanel';
+import { FullScreenLoader, Toast } from './components/Feedback';
+import { AppProvider } from './context/AppContext';
+import { useApp } from './context/useApp';
+import ActivityPage from './views/ActivityPage';
+import MarketplacePage from './views/MarketplacePage';
+import SuppliesPage from './views/SuppliesPage';
+
+function Application() {
+  const { loading, toast } = useApp();
+  const [activePage, setActivePage] = useState('marketplace');
+  const [cartOpen, setCartOpen] = useState(false);
+  if (loading.app) return <FullScreenLoader />;
+
+  const page = activePage === 'supplies' ? <SuppliesPage /> : activePage === 'activity' ? <ActivityPage /> : <MarketplacePage />;
+  return <><AppShell activePage={activePage} onNavigate={setActivePage} onCart={() => setCartOpen(true)}>{page}</AppShell><CartPanel open={cartOpen} onClose={() => setCartOpen(false)} /><AuthDialog /><Toast toast={toast} /></>;
+}
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('home');
-
-  return (
-    <div>
-      {/* Top Navigation Bar */}
-      <nav style={{ display: 'flex', gap: '1rem', padding: '1rem', background: '#f0f0f0' }}>
-        <button onClick={() => setCurrentPage('home')}>Home</button>
-        <button onClick={() => setCurrentPage('register')}>Register</button>
-        <button onClick={() => setCurrentPage('inputs')}>Farm Inputs</button>
-      </nav>
-
-      {/* Conditional Page Rendering */}
-      {currentPage === 'home' && <Home navigateTo={setCurrentPage} />}
-      {currentPage === 'register' && <Register navigateTo={setCurrentPage} />}
-      {currentPage === 'inputs' && <Inputs />}
-    </div>
-  );
+  return <AppProvider><Application /></AppProvider>;
 }

@@ -4,8 +4,9 @@ const kindLabels = { produce: 'Produce', input: 'Farm input', service: 'Service'
 
 const formatKsh = (value) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(value);
 
-export default function ListingCard({ listing, type, onAdd, onMessage, isOwner, onEdit, onDelete }) {
+export default function ListingCard({ listing, type, onAdd, isOwner, onEdit, onDelete }) {
   const kind = type === 'produce' ? 'produce' : listing.kind;
+
   const quantityLabel = kind === 'service' ? `${listing.quantity} slots` : `${listing.quantity} available`;
   return (
     <article className="listing-card">
@@ -19,7 +20,7 @@ export default function ListingCard({ listing, type, onAdd, onMessage, isOwner, 
           <div><dt>Location</dt><dd><Icon name="location" size={15} /> {listing.county}</dd></div>
         </dl>
       </div>
-      <div className="seller-row"><span>Listed by <strong>{listing.sellerName}</strong></span>{isOwner ? <span className="owner-note">Your listing</span> : <button className="text-button" onClick={() => onMessage(listing)}>Contact</button>}</div>
+      <div className="seller-row"><span>Listed by <strong>{listing.sellerName}</strong></span>{isOwner ? <span className="owner-note">Your listing</span> : null}</div>
       <div className="listing-actions">
         {isOwner ? (
           <><button className="button button-secondary" onClick={() => onEdit(listing)}><Icon name="edit" size={17} /> Edit</button><button className="button button-danger" onClick={() => onDelete(listing)}><Icon name="trash" size={17} /> Delete</button></>

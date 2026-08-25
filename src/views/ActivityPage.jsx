@@ -15,7 +15,6 @@ export default function ActivityPage() {
   const { user, token, catalogs, loading, setAuthDialog, showToast, refreshListings } = useApp();
   const [tab, setTab] = useState('listings');
   const [orders, setOrders] = useState([]);
-  const [messages, setMessages] = useState([]);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -27,7 +26,7 @@ export default function ActivityPage() {
   useEffect(() => {
     if (!user || tab === 'listings') return undefined;
     let current = true;
-    const path = tab === 'orders' ? '/orders' : '/messages';
+    const path = tab === 'orders' ? '/orders' : null;
     apiRequest(path, { token })
       .then((response) => { if (current) (tab === 'orders' ? setOrders : setMessages)(tab === 'orders' ? response.orders : response.messages); })
       .catch((error) => { if (current) showToast(error.message, 'error'); })
@@ -67,10 +66,9 @@ export default function ActivityPage() {
   return (
     <div className="page-wrap activity-page">
       <section className="page-heading split-heading"><div><p className="eyebrow">My activity</p><h1>Welcome, {user.fullName}</h1><p>{user.role === 'buyer' ? 'Review orders and stay in touch with sellers.' : 'Manage your listings, messages and orders.'}</p></div>{user.role !== 'buyer' && <button className="button button-primary" onClick={postNew}><Icon name="plus" size={17} /> New listing</button>}</section>
-      <div className="tab-list" role="tablist" aria-label="Activity sections"><button role="tab" aria-selected={tab === 'listings'} className={tab === 'listings' ? 'is-selected' : ''} onClick={() => selectTab('listings')}>Listings</button><button role="tab" aria-selected={tab === 'orders'} className={tab === 'orders' ? 'is-selected' : ''} onClick={() => selectTab('orders')}>Orders</button><button role="tab" aria-selected={tab === 'messages'} className={tab === 'messages' ? 'is-selected' : ''} onClick={() => selectTab('messages')}>Messages</button></div>
+      <div className="tab-list" role="tablist" aria-label="Activity sections"><button role="tab" aria-selected={tab === 'listings'} className={tab === 'listings' ? 'is-selected' : ''} onClick={() => selectTab('listings')}>Listings</button><button role="tab" aria-selected={tab === 'orders'} className={tab === 'orders' ? 'is-selected' : ''} onClick={() => selectTab('orders')}>Orders</button></div>
       {tab === 'listings' && (loading.produce || loading.products ? <ListingsSkeleton count={3} /> : listings.length ? <div className="listing-grid">{listings.map((listing) => <ListingCard key={listing.id} listing={listing} type={listingType} isOwner onEdit={(next) => setEditing({ type: listingType, listing: next })} onDelete={(next) => deleteListing(next, listingType)} />)}</div> : <EmptyState title={user.role === 'buyer' ? 'Buyer accounts do not post listings' : 'You have no listings yet'} detail={user.role === 'buyer' ? 'Browse the market, contact sellers and place an order when ready.' : 'Create your first listing so people can find you.'} action={user.role !== 'buyer' ? <button className="button button-primary" onClick={postNew}>Create listing</button> : null} />)}
       {tab === 'orders' && (remoteLoading ? <div className="panel-loader">Loading orders…</div> : orders.length ? <div className="activity-list">{orders.map((order) => <article className="activity-card" key={order.id}><div className="activity-card-header"><div><p className="eyebrow">Order #{order.id}</p><h2>{order.buyerId === user.id ? 'Your purchase' : `Order from ${order.buyerName}`}</h2></div><span className={`status status-${order.status}`}>{order.status}</span></div><ul className="order-items">{order.items.map((item) => <li key={item.id}><span>{item.quantity} × {item.title}</span><span>{formatKsh(item.price * item.quantity)}</span></li>)}</ul><div className="activity-card-footer"><span>{orderDate(order.createdAt)} · {formatKsh(order.total)}</span><div>{order.buyerId === user.id && order.status === 'pending' && <button className="button button-secondary" onClick={() => changeOrderStatus(order, 'cancelled')}>Cancel order</button>}{order.items.some((item) => item.sellerId === user.id) && order.status === 'pending' && <button className="button button-secondary" onClick={() => changeOrderStatus(order, 'confirmed')}>Confirm</button>}{order.items.some((item) => item.sellerId === user.id) && order.status === 'confirmed' && <button className="button button-primary" onClick={() => changeOrderStatus(order, 'fulfilled')}>Mark fulfilled</button>}</div></div></article>)}</div> : <EmptyState title="No orders yet" detail="Orders you place and receive will appear here." />)}
-      {tab === 'messages' && (remoteLoading ? <div className="panel-loader">Loading messages…</div> : messages.length ? <div className="activity-list">{messages.map((message) => <article className="activity-card message-card" key={message.id}><div><p className="eyebrow">{message.senderId === user.id ? `To ${message.recipientName}` : `From ${message.senderName}`}</p><h2>{message.subject}</h2></div><p>{message.body}</p><span className="message-date">{orderDate(message.createdAt)}</span></article>)}</div> : <EmptyState title="No messages yet" detail="Use the Contact button on a listing to ask a seller a question." />)}
       {editing && <ListingFormDialog type={editing.type} listing={editing.listing || null} onClose={() => setEditing(null)} />}
     </div>
   );

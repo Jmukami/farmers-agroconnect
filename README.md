@@ -1,60 +1,69 @@
 # AgroConnect
 
-AgroConnect is a React web application that helps farmers discover agricultural inputs and begin the registration and ordering process from one place. The current frontend prototype includes farmer registration, a farm-input catalogue, a shopping cart, and checkout verification.
+AgroConnect is a full-stack digital agricultural marketplace and service platform connecting Kenyan farmers, farm input/service suppliers, and buyers. It provides open, frictionless public discovery for agricultural goods and farm services alongside authenticated workflows for posting harvests, purchasing inputs, tracking orders, and coordinating directly between buyers and sellers.
 
-## Features
+<p align="center">
+  <img src="public/assets/images/Screenshot.png" alt="Screenshot showing the features of Shopping Manager" width="100%"/>
+</p>
 
-- Register as a farmer with a name, phone number, location, and crop or livestock information.
-- Browse a catalogue of seeds, fertilizers, crop-protection products, animal-feed supplements, and irrigation equipment.
-- Add inputs to a cart and see the item count and total price in Kenyan shillings.
-- Submit an order through the checkout and verification flow.
-- Navigate between the Home, Register, and Farm Inputs views without a page reload.
+---
 
+## Features Matrix
+
+- Register as a farmer, buyer, seller of farm inputs/service provider.
+- Browse a catalogue of farm inputs and services.
+- List farm produce for sale as a farmer.
+- Provide agricultural services and/or inputs.
+
+---
+
+## Technology Stack
+
+- **Frontend**: React 19, Vite 8, React Context API (`AppContext`), Vanilla CSS Custom Properties design system.
+- **Backend**: Node.js (ES Modules), Express 5, CORS, JSON body parsing middleware.
+- **Database**: SQLite 3 via `better-sqlite3` with foreign key enforcement and transactional inventory decrementing.
+- **Security & Auth**: JSON Web Tokens (`jsonwebtoken`), password hashing via `bcryptjs` (salt rounds: 10).
+- **Concurrency & Tooling**: `concurrently` (unified dev pipeline), ESLint 10.
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-
 - Node.js 18 or newer
-- npm
+- npm (v9+)
 
 ### Installation
-
-Clone the repository, move into the project directory, and install the dependencies:
-
 ```bash
 git clone https://github.com/Jmukami/farmers-agroconnect.git
 cd farmers-agroconnect
 npm install
 ```
 
-### Run the development server
-
+### Run Development Server
+To launch both the Express REST API (port 3001) and Vite React frontend (port 5173) concurrently:
 ```bash
 npm run dev
 ```
 
-## Project Structure
+### Default Demonstration Accounts
+The database automatically seeds with default demonstration accounts (password: `agroconnect` for all seed users):
 
-```text
-src/
-├── App.jsx       # Navigation and view switching
-├── Home.jsx      # Landing view and primary actions
-├── Register.jsx  # Farmer registration form
-├── Inputs.jsx    # Product catalogue, cart, and checkout
-├── assets/       # Static frontend assets
-└── main.jsx      # React application entry point
-```
+| Name | Role | Email | Password | Primary Offering |
+| :--- | :--- | :--- | :--- | :--- |
+| **Grace Wanjiku** | Farmer | `grace@agroconnect.local` | `agroconnect` | Tomatoes, Dry maize |
+| **Peter Otieno** | Farmer | `peter@agroconnect.local` | `agroconnect` | Table eggs, Paddy rice |
+| **Rift Farm Supplies** | Supplier | `rift@agroconnect.local` | `agroconnect` | Seeds, Fertiliser, Drip kits |
+| **VetCare Kenya** | Supplier | `vetcare@agroconnect.local` | `agroconnect` | Veterinary visits, Soil testing |
+
+---
 
 ## Team
 
-This project is maintained by Team 6:
-
+Maintained by **Team 6**:
 - Abelle Emmanuel
+- Mukundi Jochebed Mukami
+- Bruce Ouma
 - Mark Kage
-- Bruce Omondi
-- Jochebed Mukami
 
 Repository: [Jmukami/farmers-agroconnect](https://github.com/Jmukami/farmers-agroconnect)
-
-The team is working with Teams 5 and 7. AgroConnect is intended to consume Team 5's API and provide an API for Team 7 to consume as the project develops.

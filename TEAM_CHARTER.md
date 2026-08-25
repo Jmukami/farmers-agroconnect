@@ -47,4 +47,8 @@ Chosen items
 - Proceed to checkout
 
 ### Ring position:
-Team 6 working with team 5 and 7.We will be consuming team 5 API and creating  the API to be consumed by team 7.
+```mermaid
+graph LR
+    Team5["Team 5 (Upstream)<br/>SkillBridge"] -->|"Consumes API"| Team6["Team 6 (AgroConnect)<br/>Marketplace & Farmer Hub"]
+    Team6 -->|"Provides APIs"| Team7["Team 7 (Downstream)<br/>Clubs Platform"]
+```

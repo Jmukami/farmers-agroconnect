@@ -3,7 +3,7 @@
 AgroConnect is a full-stack digital agricultural marketplace and service platform connecting Kenyan farmers, farm input/service suppliers, and buyers. It provides open, frictionless public discovery for agricultural goods and farm services alongside authenticated workflows for posting harvests, purchasing inputs, tracking orders, and coordinating directly between buyers and sellers.
 
 <p align="center">
-  <img src="public/assets/images/Screenshot.png" alt="Screenshot showing the features of Shopping Manager" width="100%"/>
+  <img src="public/assets/images/Screenshot.png" alt="Screenshot showing the homepage of AgroConnect" width="100%"/>
 </p>
 
 ---

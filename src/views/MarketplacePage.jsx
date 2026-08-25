@@ -6,7 +6,6 @@ import { EmptyState, ListingsSkeleton } from '../components/Feedback';
 import Icon from '../components/Icon';
 import ListingCard from '../components/ListingCard';
 import ListingFormDialog from '../components/ListingFormDialog';
-import MessageDialog from '../components/MessageDialog';
 
 function matches(listings, search, category, county) {
   const query = search.trim().toLowerCase();
@@ -19,14 +18,12 @@ export default function MarketplacePage() {
   const [category, setCategory] = useState('');
   const [county, setCounty] = useState('');
   const [editing, setEditing] = useState(null);
-  const [messageListing, setMessageListing] = useState(null);
   const listings = useMemo(() => matches(catalogs.produce, search, category, county), [catalogs.produce, search, category, county]);
 
   const openPostForm = () => requireAuth((currentSession) => {
     if (currentSession.user.role !== 'farmer') return showToast('Use a farmer account to post produce listings.', 'error');
     setEditing({});
   }, 'register');
-  const messageSeller = (listing) => requireAuth(() => setMessageListing(listing));
   const deleteListing = async (listing) => {
     if (!window.confirm(`Delete “${listing.title}”? This cannot be undone.`)) return;
     try {
@@ -43,10 +40,9 @@ export default function MarketplacePage() {
         <button className="button button-primary" onClick={openPostForm}><Icon name="plus" size={17} /> Post produce</button>
       </section>
       <FilterBar search={search} onSearch={setSearch} category={category} onCategory={setCategory} county={county} onCounty={setCounty} listings={catalogs.produce} />
-      {loading.produce ? <ListingsSkeleton /> : listings.length ? <div className="listing-grid">{listings.map((listing) => <ListingCard key={listing.id} listing={listing} type="produce" onAdd={addToCart} onMessage={messageSeller} isOwner={listing.ownerId === user?.id} onEdit={setEditing} onDelete={deleteListing} />)}</div> : <EmptyState title="No produce matches those filters" detail="Try a different search or clear one of the filters." action={<button className="button button-secondary" onClick={() => { setSearch(''); setCategory(''); setCounty(''); }}>Clear filters</button>} />}
+      {loading.produce ? <ListingsSkeleton /> : listings.length ? <div className="listing-grid">{listings.map((listing) => <ListingCard key={listing.id} listing={listing} type="produce" onAdd={addToCart} isOwner={listing.ownerId === user?.id} onEdit={setEditing} onDelete={deleteListing} />)}</div> : <EmptyState title="No produce matches those filters" detail="Try a different search or clear one of the filters." action={<button className="button button-secondary" onClick={() => { setSearch(''); setCategory(''); setCounty(''); }}>Clear filters</button>} />}
       {!user && <section className="quiet-callout"><div><strong>Are you a farmer?</strong><p>Post a produce listing when you have stock ready to sell.</p></div><button className="text-button" onClick={() => setAuthDialog('register')}>Create farmer account <Icon name="arrow" size={16} /></button></section>}
       {editing && <ListingFormDialog type="produce" listing={editing.id ? editing : null} onClose={() => setEditing(null)} />}
-      {messageListing && <MessageDialog listing={messageListing} onClose={() => setMessageListing(null)} />}
     </div>
   );
 }

@@ -28,7 +28,7 @@ export default function ActivityPage() {
     let current = true;
     const path = tab === 'orders' ? '/orders' : null;
     apiRequest(path, { token })
-      .then((response) => { if (current) (tab === 'orders' ? setOrders : setMessages)(tab === 'orders' ? response.orders : response.messages); })
+      .then((response) => { if (current) (tab === 'orders' ? setOrders : null)(tab === 'orders' ? response.orders : response.messages); })
       .catch((error) => { if (current) showToast(error.message, 'error'); })
       .finally(() => { if (current) setRemoteLoading(false); });
     return () => { current = false; };

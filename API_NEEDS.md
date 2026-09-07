@@ -1,12 +1,12 @@
-Team 6:Agroconnect
-What team 7 needs from us
-Downstream needs (Team 7 consuming Team 6's API)
+# Team 6: AgroConnect
+## Downstream API Needs (Campus Hub / Team 7 consuming AgroConnect's API)
 
-Team 7 needs to read aspiring farmers' personal details such as contact information in order to verify members identities and register them for agricultural club memberships.
-Team 7 needs to read number of members that can be taken in order to enforce enrollment limits and prevent overbooking for agricultural clubs.
-Team 7 needs to read membership fee requirements and payment status in order to charge correct subscription dues and active membership status to farmers.
-Team 7 needs to read club membership meeting schedules and event days in order to display upcoming club activities on member calendars and prevent scheduling conflicts.
-Team 7 needs to read available farming products and catalog listings in order to allow agricultural club members to brows and orderfarm inputs or equipment directlythrough their app.
+1. Campus Hub needs to read farmers’ personal details (contact info) in order to verify member identities and register memberships.
+2. Campus Hub needs to access the locations of members’ farms in order to easy facilitate activities that may involve visits to said farms.
+3. Campus Hub needs to read farming product information including the name, category, description and other relevant product details to be listed on their website as well.
+4. Campus Hub also needs to access inventory details for the farming products, that is, the available products, quantity/stock etc.
 
-Reflection:
-During our patner interview with team 7, we saw how our two platforms can work together to serve agricultural clubs. By sharing data on aspiring farmers,meeting schedules, membership fees and farming products,we create a unified experience for users. It showed the importance of establishing clear data contracts early to ensure smooth crop-app intergration.
+---
+
+### Reflection
+During our partner interview with Campus Hub (Team 7), we identified key integration touchpoints between our digital agricultural marketplace and their campus/club platform. By providing standardized REST access to farmer profiles, farm location details, product catalog metadata, and real-time inventory levels, AgroConnect allows Campus Hub to verify members, coordinate farm educational visits, and display live agricultural supply listings. Establishing clear API contracts early ensures smooth cross-platform data exchange without coupling internal business logic.

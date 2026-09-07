@@ -1,0 +1,5 @@
+- When retrieving experts via GET /experts, how does AgroConnect identify which experts specialize in agricultural domains (e.g., Agronomy, Soil Health) versus non-agricultural subjects? Can you either add a skills: string[] field to the Expert schema, or add a tag / category query parameter to GET /experts so we only cross-list relevant agricultural mentors? As of now there is no way for us to filter experts relevant to us.
+
+- In POST /requests, does ConsultationRequest.date require an exact match against an active slot from GET /experts/{id}/availability? If a slot is already taken, will the API return 409 Conflict, and what is the exact enumeration of possible values for RequestResponse.status (e.g., ['Pending', 'Confirmed', 'Rejected'])?
+
+- Why are Maji water vendor logistics (/stations, /deliveries) bundled into the SkillBridge expert contract? 

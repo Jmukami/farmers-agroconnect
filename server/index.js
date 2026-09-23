@@ -303,35 +303,6 @@ app.patch('/api/orders/:id/status', authenticate, (req, res) => {
   res.json({ status });
 });
 
-app.get('/api/messages', authenticate, (req, res) => {
-  const messages = db.prepare(`
-    SELECT messages.id, messages.subject, messages.body, messages.created_at AS createdAt,
-      messages.sender_id AS senderId, messages.recipient_id AS recipientId,
-      sender.full_name AS senderName, recipient.full_name AS recipientName
-    FROM messages
-    JOIN users sender ON sender.id = messages.sender_id
-    JOIN users recipient ON recipient.id = messages.recipient_id
-    WHERE sender_id = ? OR recipient_id = ? ORDER BY messages.created_at DESC
-  `).all(req.user.id, req.user.id);
-  res.json({ messages });
-});
-
-app.post('/api/messages', authenticate, (req, res) => {
-  const recipientId = Number(req.body.recipientId);
-  const subject = cleanText(req.body.subject);
-  const body = cleanText(req.body.body);
-  const fields = {};
-  if (!Number.isInteger(recipientId)) fields.recipientId = 'Select a valid recipient.';
-  if (subject.length < 3) fields.subject = 'Use a subject of at least 3 characters.';
-  if (body.length < 10) fields.body = 'Your message needs at least 10 characters.';
-  if (Object.keys(fields).length) return sendError(res, 422, 'Please correct the highlighted fields.', fields);
-  if (recipientId === req.user.id) return sendError(res, 422, 'You cannot message yourself.');
-  if (!db.prepare('SELECT id FROM users WHERE id = ?').get(recipientId)) return sendError(res, 404, 'This seller could not be found.');
-  const result = db.prepare('INSERT INTO messages (sender_id, recipient_id, subject, body) VALUES (?, ?, ?, ?)').run(req.user.id, recipientId, subject, body);
-  const message = db.prepare('SELECT id, subject, body, created_at AS createdAt FROM messages WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ message });
-});
-
 app.use((_req, res) => sendError(res, 404, 'This API route was not found.'));
 
 app.use((error, _req, res, next) => {

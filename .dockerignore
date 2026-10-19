@@ -1,0 +1,11 @@
+.git
+node_modules
+dist
+client
+.env
+.env.*
+**/.env
+**/.env.*
+server/data
+server/*.test.js
+*.log

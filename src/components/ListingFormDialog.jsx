@@ -15,9 +15,9 @@ function validate(form) {
   const fields = {};
   if (form.title.trim().length < 2) fields.title = 'Enter a clear listing name.';
   if (form.category.trim().length < 2) fields.category = 'Enter a category.';
-  if (form.price === '' || Number(form.price) < 0) fields.price = 'Enter a valid price.';
+  if (form.price === '' || !Number.isFinite(Number(form.price)) || Number(form.price) < 0) fields.price = 'Enter a valid price.';
   if (!form.unit.trim()) fields.unit = 'Enter a unit.';
-  if (!Number.isInteger(Number(form.quantity)) || Number(form.quantity) < 0) fields.quantity = 'Enter a whole number that is zero or more.';
+  if (form.quantity === '' || !Number.isSafeInteger(Number(form.quantity)) || Number(form.quantity) < 0) fields.quantity = 'Enter a whole number that is zero or more.';
   if (form.county.trim().length < 2) fields.county = 'Enter the county.';
   if (form.description.trim().length < 12) fields.description = 'Add at least 12 characters.';
   return fields;
@@ -42,7 +42,7 @@ export default function ListingFormDialog({ type, listing, onClose }) {
     setIsSubmitting(true);
     try {
       const endpoint = isProduce ? '/produce' : '/products';
-      await apiRequest(listing ? `${endpoint}/${listing.id}` : endpoint, { method: listing ? 'PUT' : 'POST', token, body: form });
+      await apiRequest(listing ? `${endpoint}/${listing.id}` : endpoint, { method: listing ? 'PUT' : 'POST', token, body: { ...form, price: Number(form.price), quantity: Number(form.quantity) } });
       await refreshListings(type);
       showToast(listing ? 'Listing updated.' : 'Listing published.');
       onClose();

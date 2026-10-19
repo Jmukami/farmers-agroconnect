@@ -7,9 +7,24 @@ import db from './db.js';
 const app = express();
 const port = process.env.PORT || 3001;
 const jwtSecret = process.env.JWT_SECRET || 'agroconnect-school-project-local-secret';
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || jwtSecret === 'agroconnect-school-project-local-secret')) {
+  throw new Error('Set a private JWT_SECRET before starting in production.');
+}
 
 app.use(cors());
+app.use('/api', (req, res, next) => {
+  if (!['POST', 'PUT', 'PATCH'].includes(req.method)) return next();
+  if (!req.headers['content-type']) return sendError(res, 400, 'Send a JSON request body.');
+  if (!req.is('application/json')) return sendError(res, 415, 'Use Content-Type: application/json.');
+  return next();
+});
 app.use(express.json({ limit: '100kb' }));
+app.use('/api', (req, res, next) => {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method) && (!req.body || typeof req.body !== 'object' || Array.isArray(req.body))) {
+    return sendError(res, 400, 'Send a JSON object as the request body.');
+  }
+  return next();
+});
 
 const publicUserFields = 'id, full_name AS fullName, email, phone, county, role, focus, created_at AS createdAt';
 
@@ -48,7 +63,7 @@ function validateRegistration(body) {
     county: cleanText(body.county),
     role: cleanText(body.role),
     focus: cleanText(body.focus),
-    password: body.password || '',
+    password: typeof body.password === 'string' ? body.password : '',
   };
   const fields = {};
   if (data.fullName.length < 2) fields.fullName = 'Enter your full name.';
@@ -75,7 +90,7 @@ function parseListing(body, type) {
   const data = {
     title: cleanText(body.title), category: cleanText(body.category), unit: cleanText(body.unit),
     county: cleanText(body.county), description: cleanText(body.description),
-    price: Number(body.price), quantity: Number(body.quantity),
+    price: body.price, quantity: body.quantity,
   };
   if (type === 'produce') data.availableFrom = cleanText(body.availableFrom);
   const fields = {};
@@ -121,7 +136,7 @@ app.post('/api/auth/register', (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   const email = cleanText(req.body.email).toLowerCase();
-  const password = req.body.password || '';
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
   const account = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
   if (!account || !bcrypt.compareSync(password, account.password_hash)) {
     return sendError(res, 401, 'Email or password is incorrect.');
@@ -242,24 +257,36 @@ app.post('/api/orders', authenticate, (req, res) => {
   if (!items.length) return sendError(res, 422, 'Add at least one item before placing an order.');
   if (items.length > 25) return sendError(res, 422, 'An order can contain up to 25 line items.');
 
-  const resolvedItems = [];
+  const grouped = new Map();
   for (const item of items) {
-    const listingType = item.type === 'produce' ? 'produce' : 'product';
-    const quantity = Number(item.quantity);
-    if (!Number.isInteger(quantity) || quantity < 1) return sendError(res, 422, 'Every item needs a valid quantity.');
-    const table = listingType === 'produce' ? 'produce_listings' : 'products';
-    const countColumn = listingType === 'produce' ? 'quantity' : 'stock';
-    const listing = db.prepare(`SELECT id, owner_id, title, unit, price, ${countColumn} AS available FROM ${table} WHERE id = ?`).get(item.id);
-    if (!listing || listing.available < quantity) return sendError(res, 409, `One or more items are no longer available in the requested quantity.`);
-    if (listing.owner_id === req.user.id) return sendError(res, 422, 'You cannot order your own listing.');
-    resolvedItems.push({ ...listing, listingType, quantity });
+    if (!item || !['produce', 'product'].includes(item.type) || !Number.isSafeInteger(item.id) || item.id < 1) {
+      return sendError(res, 422, 'Every item needs a positive integer id and a type of produce or product.');
+    }
+    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) return sendError(res, 422, 'Every item needs a valid quantity.');
+    const key = `${item.type}:${item.id}`;
+    const quantity = (grouped.get(key)?.quantity || 0) + item.quantity;
+    if (!Number.isSafeInteger(quantity)) return sendError(res, 422, 'Every item needs a valid quantity.');
+    grouped.set(key, { ...item, quantity });
   }
 
   const createOrder = db.transaction(() => {
+    const resolvedItems = [];
+    for (const item of grouped.values()) {
+      const listingType = item.type;
+      const quantity = item.quantity;
+      const table = listingType === 'produce' ? 'produce_listings' : 'products';
+      const countColumn = listingType === 'produce' ? 'quantity' : 'stock';
+      const listing = db.prepare(`SELECT id, owner_id, title, unit, price, ${countColumn} AS available FROM ${table} WHERE id = ?`).get(item.id);
+      if (!listing || listing.available < quantity) throw Object.assign(new Error('One or more items are no longer available in the requested quantity.'), { status: 409 });
+      if (listing.owner_id === req.user.id) throw Object.assign(new Error('You cannot order your own listing.'), { status: 422 });
+      resolvedItems.push({ ...listing, listingType, quantity });
+    }
+
     const total = resolvedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const order = db.prepare('INSERT INTO orders (buyer_id, total) VALUES (?, ?)').run(req.user.id, total);
     const insertItem = db.prepare(`INSERT INTO order_items (order_id, seller_id, listing_type, listing_id, title, unit, price, quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
     for (const item of resolvedItems) {
+      db.prepare('INSERT OR IGNORE INTO order_sellers (order_id, seller_id) VALUES (?, ?)').run(order.lastInsertRowid, item.owner_id);
       insertItem.run(order.lastInsertRowid, item.owner_id, item.listingType, item.id, item.title, item.unit, item.price, item.quantity);
       const table = item.listingType === 'produce' ? 'produce_listings' : 'products';
       const countColumn = item.listingType === 'produce' ? 'quantity' : 'stock';
@@ -268,7 +295,7 @@ app.post('/api/orders', authenticate, (req, res) => {
     return order.lastInsertRowid;
   });
 
-  const orderId = createOrder();
+  const orderId = createOrder.immediate();
   const order = db.prepare('SELECT id, total, status, created_at AS createdAt FROM orders WHERE id = ?').get(orderId);
   res.status(201).json({ order });
 });
@@ -288,7 +315,14 @@ app.get('/api/orders', authenticate, (req, res) => {
       order_items.seller_id AS sellerId, seller.full_name AS sellerName
     FROM order_items JOIN users seller ON seller.id = order_items.seller_id WHERE order_id = ?
   `);
-  res.json({ orders: orders.map((order) => ({ ...order, items: findItems.all(order.id) })) });
+  const findSellers = db.prepare('SELECT seller_id AS sellerId, status FROM order_sellers WHERE order_id = ?');
+  res.json({ orders: orders.map((order) => {
+    const isBuyer = order.buyerId === req.user.id;
+    const items = findItems.all(order.id).filter((item) => isBuyer || item.sellerId === req.user.id);
+    const sellers = findSellers.all(order.id).filter((seller) => isBuyer || seller.sellerId === req.user.id);
+    return { ...order, total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      status: isBuyer ? order.status : sellers[0].status, sellers, items };
+  }) });
 });
 
 app.patch('/api/orders/:id/status', authenticate, (req, res) => {
@@ -296,10 +330,26 @@ app.patch('/api/orders/:id/status', authenticate, (req, res) => {
   if (!['confirmed', 'fulfilled', 'cancelled'].includes(status)) return sendError(res, 422, 'Choose a valid order status.');
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return sendError(res, 404, 'This order no longer exists.');
-  const isSeller = db.prepare('SELECT 1 FROM order_items WHERE order_id = ? AND seller_id = ?').get(order.id, req.user.id);
-  const canCancel = status === 'cancelled' && order.buyer_id === req.user.id && order.status === 'pending';
-  if (!isSeller && !canCancel) return sendError(res, 403, 'You cannot change this order status.');
-  db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, order.id);
+  const updateStatus = db.transaction(() => {
+    const portions = db.prepare('SELECT seller_id, status FROM order_sellers WHERE order_id = ?').all(order.id);
+    if (order.buyer_id === req.user.id) {
+      if (status !== 'cancelled' || portions.some((portion) => portion.status !== 'pending')) {
+        throw Object.assign(new Error('You can only cancel an order while all seller portions are pending.'), { status: 403 });
+      }
+      db.prepare('UPDATE order_sellers SET status = ? WHERE order_id = ?').run(status, order.id);
+    } else {
+      const portion = portions.find((portion) => portion.seller_id === req.user.id);
+      if (!portion) throw Object.assign(new Error('You cannot change this order status.'), { status: 403 });
+      const allowed = { pending: ['confirmed', 'cancelled'], confirmed: ['fulfilled', 'cancelled'], fulfilled: [], cancelled: [] };
+      if (!allowed[portion.status].includes(status)) throw Object.assign(new Error('This order status transition is not allowed.'), { status: 409 });
+      db.prepare('UPDATE order_sellers SET status = ? WHERE order_id = ? AND seller_id = ?').run(status, order.id, req.user.id);
+    }
+    const statuses = db.prepare('SELECT status FROM order_sellers WHERE order_id = ?').all(order.id).map((portion) => portion.status);
+    const active = statuses.filter((value) => value !== 'cancelled');
+    const overall = !active.length ? 'cancelled' : active.every((value) => value === 'fulfilled') ? 'fulfilled' : statuses.every((value) => value === 'pending') ? 'pending' : 'confirmed';
+    db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(overall, order.id);
+  });
+  updateStatus.immediate();
   res.json({ status });
 });
 
@@ -307,8 +357,11 @@ app.use((_req, res) => sendError(res, 404, 'This API route was not found.'));
 
 app.use((error, _req, res, next) => {
   void next;
+  if (error.type === 'entity.parse.failed') return sendError(res, 400, 'Send valid JSON with an object request body.');
+  if (error.type === 'entity.too.large') return sendError(res, 413, 'Request body exceeds the 100 KB limit.');
+  if ([409, 422, 403].includes(error.status)) return sendError(res, error.status, error.message);
   console.error(error);
   sendError(res, 500, 'Something went wrong on the server. Please try again.');
 });
 
-app.listen(port, () => console.log(`AgroConnect API is running at http://localhost:${port}`));
+app.listen(port, () => console.log(`AgroConnect API is running at http://localhost:${port}/api`));

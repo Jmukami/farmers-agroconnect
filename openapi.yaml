@@ -4,6 +4,11 @@ info:
   description: |
     AgroConnect is a full-stack digital agricultural marketplace and service platform connecting Kenyan farmers, farm input/service suppliers, and buyers.
     
+    JSON write requests require an object body and Content-Type application/json.
+    Missing or malformed bodies return 400, unsupported media types return 415,
+    and bodies above 100 KB return 413. Numeric fields require JSON numbers.
+    Timestamps are UTC. County and category filters are case-sensitive.
+
     This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both internally and  our downstream integration partners: **Campus Hub** / Team 7).
   version: 1.0.0
   license:
@@ -610,7 +615,7 @@ paths:
       tags:
         - Orders
       summary: List user orders
-      description: Retrieves all orders where the authenticated user is either the buyer or one of the line-item sellers.
+      description: Buyers receive all items and the full total. Sellers receive only their items, subtotal, and portion status. Both receive a sellers array scoped to their visibility.
       operationId: listOrders
       security:
         - bearerAuth: []
@@ -640,8 +645,10 @@ paths:
       summary: Update order status
       description: |
         Updates the fulfillment workflow status of an order.
-        - **Seller**: can transition `pending` -> `confirmed` -> `fulfilled`.
-        - **Buyer**: can transition `pending` -> `cancelled`.
+        - **Seller**: updates only their portion, pending -> confirmed -> fulfilled, or cancels a pending/confirmed portion. Invalid transitions return 409.
+        - Aggregate buyer status is cancelled if all portions are cancelled, fulfilled if all non-cancelled portions are fulfilled, pending if all portions are pending, and confirmed otherwise.
+        - Cancellation does not restore inventory. Existing orders inherit their historical shared status for each seller portion.
+        - **Buyer**: can cancel the whole order only while every seller portion is pending; otherwise returns 403.
       operationId: updateOrderStatus
       security:
         - bearerAuth: []
@@ -683,6 +690,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Seller portion cannot make the requested status transition
           content:
             application/json:
               schema:
@@ -1254,6 +1267,17 @@ components:
         createdAt:
           type: string
           example: '2026-08-24 17:35:00'
+        sellers:
+          type: array
+          description: All portions for buyers; only the authenticated seller portion for sellers.
+          items:
+            type: object
+            properties:
+              sellerId:
+                type: integer
+              status:
+                type: string
+                enum: [pending, confirmed, fulfilled, cancelled]
         items:
           type: array
           items:

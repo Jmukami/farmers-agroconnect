@@ -15,6 +15,10 @@ npm start
 
 The API listens at **http://localhost:3001/api**. SQLite tables and demo data are created automatically in `server/data/agroconnect.db`; no database service, migration command, or environment file is required. Data persists across restarts. The server reads `PORT` and `JWT_SECRET` from the process environment; it does not automatically load `server/.env`. Its default signing secret and demo credentials are for local development. For a deployment, supply a private `JWT_SECRET` through the environment.
 
+If `npm ci` fails while installing `better-sqlite3`, check `node --version` against the supported Node version above. Native builds may need access to nodejs.org for Node headers, plus Python and C++ build tools when no prebuilt binary is available. On restricted networks, ask the administrator to allow the required download or configure an approved proxy. Keep the lockfile and retry `npm ci` after fixing the underlying error; do not disable TLS verification.
+
+Configuration examples are in `server/.env.example`. Files named `.env` are not loaded automatically. In PowerShell, set `$env:JWT_SECRET='your-private-secret'` before `npm start`; in Bash, use `JWT_SECRET='your-private-secret' npm start`. Production startup rejects a missing or default secret. Tests use `DATABASE_PATH` to isolate their SQLite database.
+
 To run the React frontend and API together instead, use `npm run dev` (frontend normally at http://localhost:5173). API-only use does not require a frontend build.
 
 ### Check the API — GET /health
@@ -65,7 +69,7 @@ Response: **200 OK**
 }
 ```
 
-The responses in this guide were captured from a fresh, isolated local database. Timestamps and JWTs vary per run; IDs and quantities match when you follow this guide once on a fresh database. Only JWT values are replaced with explanatory text. Always use the token returned by your own request. No hosted API URL is configured in this repository.
+The responses in this guide were captured from a fresh, isolated local database. Timestamps use UTC in `YYYY-MM-DD HH:mm:ss` format (Nairobi is UTC+3). Timestamps and JWTs vary per run; IDs and quantities match when you follow this guide once on a fresh database. Only JWT values are replaced with explanatory text. Always use the token returned by your own request. No hosted API URL is configured in this repository.
 
 ## 3. Authenticate
 
@@ -254,7 +258,7 @@ Response: **200 OK**
 }
 ```
 
-Both `GET /produce` and `GET /products` accept optional `search` (title/description substring), `county`, and `category` (exact matches). Products also accept `kind=input` or `kind=service`. Use `curl --get --data-urlencode 'search=soil testing' http://localhost:3001/api/products` for values containing spaces. Collections return all matches without pagination; no matches returns `{"listings":[]}`. Product stock is exposed as **quantity** in the running API.
+Both `GET /produce` and `GET /products` accept optional `search` (title/description substring), `county`, and `category` (case-sensitive exact matches). Products also accept `kind=input` or `kind=service`. Use `curl --get --data-urlencode 'search=soil testing' http://localhost:3001/api/products` for values containing spaces. Collections return all matches without pagination; no matches returns `{"listings":[]}`. Product stock is exposed as **quantity** in the running API.
 
 ## 5. Place and manage an order
 
@@ -298,6 +302,7 @@ Response: **200 OK**
       "createdAt": "2026-10-12 10:51:06",
       "buyerName": "Alex Buyer",
       "buyerPhone": "0712345678",
+      "sellers": [{ "sellerId": 1, "status": "pending" }],
       "items": [
         {
           "id": 1,
@@ -328,13 +333,15 @@ Response: **200 OK**
 }
 ```
 
-`GET /orders` returns orders where you are the buyer or a seller, with item details. New orders start as `pending`. A participating seller can set `confirmed`, `fulfilled`, or `cancelled`; the current implementation does not enforce sequential transitions. A buyer can only set `cancelled` while the order is pending. Cancellation currently does **not** restore inventory.
+`GET /orders` returns orders where you are the buyer or a seller. Buyers see all items, the full total, and a `sellers` array of `{sellerId, status}`. Sellers see only their own items, subtotal, seller entry, and portion status. Duplicate lines for the same listing type and ID are combined before inventory is checked. Item IDs and quantities must be positive JSON integers; types must be exactly `produce` or `product`.
+
+Each seller portion starts `pending`. Sellers can move their portion from `pending` to `confirmed`, then `fulfilled`, or cancel a pending/confirmed portion. Terminal portions cannot be reopened (409). Buyers can cancel the entire order only while every portion is pending (403 otherwise). PATCH returns the requested `{status}`; fetch the order again for its aggregate state. The buyer's aggregate status is `cancelled` when all portions are cancelled, `fulfilled` when all remaining portions are fulfilled, `pending` when all portions are pending, and `confirmed` otherwise. Cancellation does **not** restore inventory. Existing databases receive seller portions with their previous shared order status; historical per-seller states cannot be recovered.
 
 ## 6. Publish, update, and remove listings
 
 The following examples create new listings, update them, then delete them. IDs 5 (produce) and 7 (product) assume the fresh seeded database; otherwise use the IDs returned by your POST requests. PUT requires the complete listing fields, not just the changed field.
 
-Listing fields: `title`, `category`, and `county` must have at least 2 characters; `unit` must be nonempty; `description` needs at least 12 characters; `price` is nonnegative; `quantity` is a nonnegative integer. Produce accepts optional `availableFrom` text. Products require `kind`: `input` or `service` (service availability also uses `quantity`).
+Listing fields: `title`, `category`, and `county` must have at least 2 characters; `unit` must be nonempty; `description` needs at least 12 characters; `price` is a finite nonnegative JSON number; `quantity` is a nonnegative JSON integer. Numeric strings, nulls, and booleans are rejected. Produce accepts optional `availableFrom` text. Products require `kind`: `input` or `service` (service availability also uses `quantity`).
 
 ### Create produce — POST /produce
 
@@ -514,14 +521,19 @@ Response: **422 Unprocessable Entity**
 
 | Status | Meaning / actual message example |
 | --- | --- |
+| 400 | Missing body, malformed JSON, or a body that is not a JSON object |
+| 413 | Body exceeds 100 KB |
+| 415 | Unsupported content type: `Use Content-Type: application/json.` |
 | 401 | Missing token: `Sign in to continue.`; bad login: `Email or password is incorrect.`; invalid/expired token: `Your session has expired. Please sign in again.` |
-| 403 | Wrong role or owner: `You can only manage your own listings.` |
-| 404 | Missing resource or route: `This API route was not found.` |
-| 409 | Duplicate email or unavailable inventory: `One or more items are no longer available in the requested quantity.` |
-| 422 | Invalid fields or order: `Every item needs a valid quantity.` |
+| 403 | Wrong role or owner: `You can only manage your own listings.`; `Only farmer accounts can post produce listings.`; forbidden order changes |
+| 404 | Missing resource or route: `This API route was not found.`; `This listing no longer exists.` |
+| 409 | Duplicate email: `An account with this email already exists.` with `fields.email` equal to `Try signing in instead.`; invalid status transition; unavailable inventory: `One or more items are no longer available in the requested quantity.` |
+| 422 | Invalid fields or order: `Every item needs a valid quantity.`; `You cannot order your own listing.`; invalid item type or ID |
 | 500 | `Something went wrong on the server. Please try again.` |
 
-Send valid JSON with `Content-Type: application/json`. The body limit is 100 KB. The current global error handler also turns malformed JSON and oversized-body errors into the generic 500 response above.
+Send valid JSON with `Content-Type: application/json`. The body limit is 100 KB. Malformed JSON returns 400, oversized bodies return 413, and unsupported content types return 415. Unexpected server failures return 500.
+
+Run `npm test` for isolated API regression checks, `npm run lint` for static checks, and `npm run build` for the frontend production build.
 
 ## API reference and team
 

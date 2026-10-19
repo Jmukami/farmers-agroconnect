@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
-const databasePath = join(currentDirectory, 'data', 'agroconnect.db');
+const databasePath = process.env.DATABASE_PATH || join(currentDirectory, 'data', 'agroconnect.db');
 
 mkdirSync(dirname(databasePath), { recursive: true });
 
@@ -139,5 +139,18 @@ if (rowCount === 0) {
 
   seed();
 }
+
+// Backfill existing orders once, preserving their historical shared status.
+db.transaction(() => {
+  db.exec(`CREATE TABLE IF NOT EXISTS order_sellers (
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    seller_id INTEGER NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'confirmed', 'fulfilled', 'cancelled')),
+    PRIMARY KEY (order_id, seller_id)
+  )`);
+  db.exec(`INSERT OR IGNORE INTO order_sellers (order_id, seller_id, status)
+    SELECT DISTINCT orders.id, order_items.seller_id, orders.status
+    FROM orders JOIN order_items ON order_items.order_id = orders.id`);
+})();
 
 export default db;

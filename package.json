@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "node --test server/api.test.js",
     "dev": "concurrently -n api,web -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite --open",
     "dev:server": "node server/index.js",

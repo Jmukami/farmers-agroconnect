@@ -9,6 +9,8 @@ The main resources are users, produce listings, products (inputs or services), o
 `GET /api/farmers` and `GET /api/farmers/:id` provide the farmer contact profile required by an external consumer without exposing account emails or password data. The produce and product catalogue endpoints are public as well.
 
 
+The deployed API base URL is https://farmers-agroconnect.onrender.com/api. For local frontend testing against it, set `VITE_API_BASE_URL` to that URL before starting Vite, and allow the frontend origin in the API's `CORS_ORIGINS`. See [deployment instructions](DEPLOYMENT.md).
+
 ## 1. Prerequisites & Environment Setup
 
 - **Node.js**: 22.x (22.13 or newer)

@@ -1,11 +1,18 @@
 # AgroConnect REST API Reference
 
-The AgroConnect backend provides a RESTful JSON API running by default on port `3001` (with base path `/api`).
+The AgroConnect backend provides a RESTful JSON API hosted on Render, with persistent data stored in Turso. Local development uses port `3001` and the `/api` base path.
 
 ## Base URL & General Conventions
 
-```text
-http://localhost:3001/api
+| Environment | API base URL |
+| --- | --- |
+| Hosted | https://farmers-agroconnect.onrender.com/api |
+| Local | http://localhost:3001/api |
+
+Paths below include `/api`; append them to the host origin, or omit that prefix when using the base URL above. The hosted service serves API routes only. Render Free may need about a minute to wake after inactivity. Live data can differ from examples.
+
+```bash
+curl -i 'https://farmers-agroconnect.onrender.com/api/health'
 ```
 
 - **Data Exchange**: All request payloads and response bodies use `application/json`.

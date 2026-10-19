@@ -2,6 +2,15 @@
 
 This setup hosts only the Express API on Render Free and keeps persistent data in Turso Free. The React frontend is not built or served. No paid disk, Railway subscription, or Render Postgres database is required. Stay on the free plans and leave paid upgrades/overages disabled; free-tier quotas and service availability still apply.
 
+## Current deployment
+
+- Service: https://farmers-agroconnect.onrender.com
+- API base URL: https://farmers-agroconnect.onrender.com/api
+- Health check: https://farmers-agroconnect.onrender.com/api/health
+- Storage: remote Turso libSQL database
+
+The root URL does not serve a frontend. Use `/api` endpoints. The steps below document how to reproduce or maintain the deployment; the running service is already provisioned.
+
 ## 1. Create the Turso database
 
 Create a free Turso account and a **libSQL database**, which is the engine supported by this project's `@libsql/client` driver. With the Turso CLI:
@@ -40,11 +49,11 @@ Postman, curl, and server-to-server consumers do not need CORS configuration. Br
 
 ## 3. Verify deployment
 
-Use the Render-generated HTTPS domain:
+Check the current deployed API:
 
 ```bash
-curl -i 'https://YOUR-SERVICE.onrender.com/api/health'
-curl -i 'https://YOUR-SERVICE.onrender.com/api/produce'
+curl -i 'https://farmers-agroconnect.onrender.com/api/health'
+curl -i 'https://farmers-agroconnect.onrender.com/api/produce'
 ```
 
 Expect `200` with `{"status":"ok"}` from health. Unless demonstration seeding is enabled, a new database returns `{"listings":[]}`. Use the README register/login examples with the Render base URL, then redeploy and confirm the account persists. Data lives in Turso, so Render restarts do not erase it. Seeding runs only on an empty users table; turning seeding off does not remove previously seeded accounts.
@@ -57,6 +66,6 @@ Run `npm test`, `npm run lint`, and `npm run build`. Without Turso variables and
 
 Build the API image with `docker build -t agroconnect-api .`. To run it in production mode, provide `JWT_SECRET`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN`, and map the API port. No volume mount is required. Local tests cannot verify your hosted credentials, network access, or provider quotas; verify the deployed endpoints after configuring the accounts.
 
-No hosted accounts or resources are created by these files.
+Configuration files do not provision resources by themselves; the current deployment was configured in the hosting accounts.
 
 References: [Render free limits](https://render.com/docs/free), [Render Blueprint reference](https://render.com/docs/blueprint-spec), [Turso client documentation](https://docs.turso.tech/sdk/ts/reference), [Turso pricing](https://turso.tech/pricing?frequency=monthly).

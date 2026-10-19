@@ -18,6 +18,12 @@ info:
     name: AgroConnect Team (Team 6)
     url: https://github.com/Jmukami/farmers-agroconnect
 
+servers:
+  - url: https://farmers-agroconnect.onrender.com
+    description: Hosted API on Render; endpoint paths already include /api
+  - url: http://localhost:3001
+    description: Local development
+
 tags:
   - name: Authentication
     description: User registration, login, and session validation

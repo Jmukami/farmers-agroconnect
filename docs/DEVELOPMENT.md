@@ -11,7 +11,7 @@ The main resources are users, produce listings, products (inputs or services), o
 
 ## 1. Prerequisites & Environment Setup
 
-- **Node.js**: `v18.0.0` or higher (Node 20+ recommended)
+- **Node.js**: 22.x (22.13 or newer)
 - **Package Manager**: `npm` (v9+)
 - **Git**: Configured with user name and email
 
@@ -26,10 +26,12 @@ npm install
 
 ## 2. Environment Variables
 
-The backend uses standard environment variables with automatic local fallbacks:
+The backend uses standard environment variables with local development fallbacks. Production requires a private JWT secret and does not seed demo accounts automatically. See [deployment instructions](DEPLOYMENT.md) for Render API hosting, Turso storage, and CORS.
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
+| `TURSO_DATABASE_URL` | Unset locally | Remote libSQL URL; required in production |
+| `TURSO_AUTH_TOKEN` | Unset locally | Remote database token; required in production |
 | `PORT` | `3001` | Express API listener port |
 | `JWT_SECRET` | `agroconnect-school-project-local-secret` | Cryptographic secret used to sign and verify session JWTs |
 
@@ -62,7 +64,7 @@ PORT=3001 JWT_SECRET="your-secure-random-secret" npm run dev
 
 ## 4. Database Management
 
-The application uses an embedded SQLite database managed by `better-sqlite3`.
+The application uses `@libsql/client`: a local SQLite file in development, and a remote Turso libSQL database in production. Database calls and transactions are asynchronous.
 
 - **Database File**: `server/data/agroconnect.db` (automatically created and ignored in `.gitignore`).
 - **Schema Auto-Migration & Seeding**: [`server/db.js`](file:///C:/Users/Emmanuel/School/2.2/API/Projects/farmers-agroconnect/server/db.js) executes `CREATE TABLE IF NOT EXISTS` at startup. If the `users` table is empty, it runs seed transactions populating test accounts and listings.

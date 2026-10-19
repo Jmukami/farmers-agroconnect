@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
+import { pathToFileURL } from 'node:url';
 
 test('API validation, atomic stock handling, seller isolation and migration', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'agro-test-'));
@@ -14,7 +15,7 @@ test('API validation, atomic stock handling, seller isolation and migration', as
   await new Promise((resolve) => socket.close(resolve));
   let child;
   const start = async () => {
-    child = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, PORT: String(port), DATABASE_PATH: join(directory, 'test.db'), JWT_SECRET: 'isolated-test-secret' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    child = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, NODE_ENV: 'test', TURSO_DATABASE_URL: '', TURSO_AUTH_TOKEN: '', SEED_DEMO_DATA: 'true', PORT: String(port), DATABASE_PATH: join(directory, 'test.db'), JWT_SECRET: 'isolated-test-secret' }, stdio: ['ignore', 'pipe', 'pipe'] });
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Server startup timed out')), 10000);
       child.once('error', reject);
@@ -90,15 +91,22 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     assert.equal((await patch(supplier, 'confirmed')).status, 409);
     const cancellable = await request('/orders', 'POST', { items: [{ id: 1, type: 'produce', quantity: 1 }, { id: 1, type: 'product', quantity: 1 }] }, buyer);
     assert.equal((await request(`/orders/${cancellable.data.order.id}/status`, 'PATCH', { status: 'cancelled' }, buyer)).status, 200);
+    const limited = await request('/produce', 'POST', { ...listing, quantity: 1 }, farmer);
+    const competing = await Promise.all([1, 2].map(() => request('/orders', 'POST', {
+      items: [{ id: limited.data.listing.id, type: 'produce', quantity: 1 }],
+    }, buyer)));
+    assert.deepEqual(competing.map((response) => response.status).sort(), [201, 409]);
+    const remaining = (await request('/produce')).data.listings.find((item) => item.id === limited.data.listing.id);
+    assert.equal(remaining.quantity, 0);
     await stop();
     await start();
     const persisted = (await orders(buyer)).find((order) => order.id === id);
     assert.deepEqual(persisted.sellers.map((portion) => portion.status).sort(), ['cancelled', 'fulfilled']);
     await stop();
     // Simulate a database made before the seller-status migration.
-    const { default: Database } = await import('better-sqlite3');
-    const legacy = new Database(join(directory, 'test.db'));
-    legacy.exec('DROP TABLE order_sellers');
+    const { createClient } = await import('@libsql/client');
+    const legacy = createClient({ url: pathToFileURL(join(directory, 'test.db')).href });
+    await legacy.execute('DROP TABLE order_sellers');
     legacy.close();
     await start();
     const migrated = (await orders(buyer)).find((order) => order.id === id);

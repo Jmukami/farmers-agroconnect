@@ -13,11 +13,11 @@ npm ci
 npm start
 ```
 
-The API listens at **http://localhost:3001/api**. SQLite tables and demo data are created automatically in `server/data/agroconnect.db`; no database service, migration command, or environment file is required. Data persists across restarts. The server reads `PORT` and `JWT_SECRET` from the process environment; it does not automatically load `server/.env`. Its default signing secret and demo credentials are for local development. For a deployment, supply a private `JWT_SECRET` through the environment.
+The API listens at **http://localhost:3001/api**. SQLite tables and demo data are created automatically in `server/data/agroconnect.db`; no database service, migration command, or environment file is required. Data persists across restarts. The server reads `PORT` and `JWT_SECRET` from the process environment; it does not automatically load `server/.env`. Its default signing secret and demo credentials are for local development. For production, supply a private `JWT_SECRET`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` through the environment; the hosted database replaces the local SQLite file.
 
-If `npm ci` fails while installing `better-sqlite3`, check `node --version` against the supported Node version above. Native builds may need access to nodejs.org for Node headers, plus Python and C++ build tools when no prebuilt binary is available. On restricted networks, ask the administrator to allow the required download or configure an approved proxy. Keep the lockfile and retry `npm ci` after fixing the underlying error; do not disable TLS verification.
+If `npm ci` fails, check Node.js is in the supported 22.x line and inspect the first npm error. Check registry/network access and retry after resolving the cause. The project now uses `@libsql/client` instead of `better-sqlite3`; local development still needs its platform-specific libSQL package, so do not omit optional dependencies. Keep the lockfile and do not disable TLS verification.
 
-Configuration examples are in `server/.env.example`. Files named `.env` are not loaded automatically. In PowerShell, set `$env:JWT_SECRET='your-private-secret'` before `npm start`; in Bash, use `JWT_SECRET='your-private-secret' npm start`. Production startup rejects a missing or default secret. Tests use `DATABASE_PATH` to isolate their SQLite database.
+Configuration examples are in `server/.env.example`. Files named `.env` are not loaded automatically. In PowerShell, set `$env:JWT_SECRET='your-private-secret'` before `npm start`; in Bash, use `JWT_SECRET='your-private-secret' npm start`. Production startup rejects a missing/default signing secret or missing remote database configuration. Tests use `DATABASE_PATH` to isolate their SQLite database.
 
 To run the React frontend and API together instead, use `npm run dev` (frontend normally at http://localhost:5173). API-only use does not require a frontend build.
 
@@ -536,6 +536,8 @@ Send valid JSON with `Content-Type: application/json`. The body limit is 100 KB.
 Run `npm test` for isolated API regression checks, `npm run lint` for static checks, and `npm run build` for the frontend production build.
 
 ## API reference and team
+
+For API-only hosting on Render Free with a persistent Turso Free database, follow [the deployment guide](docs/DEPLOYMENT.md). The repository includes an API Dockerfile and `render.yaml` Blueprint. Production requires `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and a private `JWT_SECRET`; it never falls back to a disposable local database. Demo accounts are created in production only when `SEED_DEMO_DATA=true` is explicitly set.
 
 See [openapi.yaml](openapi.yaml) for the broader API contract. Entries marked **PROPOSED** (farm location, individual listing detail, and dedicated inventory routes) are not implemented and return 404. This README documents the routes and response shapes currently implemented in [server/index.js](server/index.js).
 

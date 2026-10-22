@@ -32,12 +32,7 @@ npm ci
 npm start
 ```
 
-### Base API URLs
-
-- **Live Production API:** `https://farmers-agroconnect.onrender.com/api`
-- **Local Development:** `http://localhost:3001/api`
-
-SQLite tables and demo data are created automatically in `server/data/agroconnect.db` for local development. For live integration, request all endpoints against the production base URL above. The server reads `PORT` and `JWT_SECRET` from the process environment; it does not automatically load `server/.env`. Its default signing secret and demo credentials are for local development. For production, supply a private `JWT_SECRET`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` through the environment; the hosted database replaces the local SQLite file.
+The API listens at **http://localhost:3001/api**. SQLite tables and demo data are created automatically in `server/data/agroconnect.db`; no database service, migration command, or environment file is required. Data persists across restarts. The server reads `PORT` and `JWT_SECRET` from the process environment; it does not automatically load `server/.env`. Its default signing secret and demo credentials are for local development. For production, supply a private `JWT_SECRET`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` through the environment; the hosted database replaces the local SQLite file.
 
 If `npm ci` fails, check Node.js is in the supported 22.x line and inspect the first npm error. Check registry/network access and retry after resolving the cause. The project now uses `@libsql/client` instead of `better-sqlite3`; local development still needs its platform-specific libSQL package, so do not omit optional dependencies. Keep the lockfile and do not disable TLS verification.
 

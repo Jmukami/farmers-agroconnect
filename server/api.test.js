@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
-import { pathToFileURL } from 'node:url';
+import { assertContract } from './contract-assertions.js';
 
 test('API validation, atomic stock handling, seller isolation and migration', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'agro-test-'));
@@ -26,7 +26,9 @@ test('API validation, atomic stock handling, seller isolation and migration', as
   const stop = () => new Promise((resolve) => { child.once('exit', resolve); child.kill(); });
   const request = async (path, method = 'GET', body, token, raw = false, contentType = 'application/json') => {
     const response = await fetch(`http://127.0.0.1:${port}/api${path}`, { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'Content-Type': contentType } : {}) }, body: body === undefined ? undefined : raw ? body : JSON.stringify(body) });
-    return { status: response.status, data: response.status === 204 ? null : await response.json() };
+    const data = response.status === 204 ? null : await response.json();
+    assertContract(path, method, response.status, data);
+    return { status: response.status, data };
   };
   try {
     await start();
@@ -39,6 +41,36 @@ test('API validation, atomic stock handling, seller isolation and migration', as
       assert.equal((await request(path, 'GET', undefined, buyer)).status, 200);
     }
     assert.equal((await request('/auth/me')).status, 401);
+    const catalog = (await request('/products')).data.listings;
+    const browserRead = await fetch(`http://127.0.0.1:${port}/api/products`, { headers: { Origin: 'https://campus-hub.example' } });
+    assert.equal(browserRead.headers.get('access-control-allow-origin'), '*');
+    await browserRead.arrayBuffer();
+    const inventoryRead = await fetch(`http://127.0.0.1:${port}/api/products/1/inventory`);
+    assert.equal(inventoryRead.headers.get('cache-control'), 'no-store');
+    await inventoryRead.arrayBuffer();
+    const publicProfile = (await request('/farmers/1')).data.farmer;
+    assert.ok(!('password_hash' in publicProfile) && !('passwordHash' in publicProfile) && !('email' in publicProfile));
+    assert.ok(catalog.every((item) => item.stock === item.quantity));
+    assert.deepEqual((await request('/products/1')).data.listing, catalog.find((item) => item.id === 1));
+    assert.equal((await request('/products/1/detail')).data.product.id, 1);
+    assert.equal((await request('/produce/1/detail')).data.produce.id, 1);
+    assert.equal((await request('/produce/1')).data.listing.id, 1);
+    assert.equal((await request('/products/nope')).status, 400);
+    assert.equal((await request('/products/999999')).status, 404);
+    assert.equal((await request('/products/999999/inventory')).status, 404);
+    const inventory = await request('/products/1/inventory');
+    assert.equal(inventory.data.stock, catalog.find((item) => item.id === 1).quantity);
+    assert.equal(inventory.data.inStock, true);
+    const farmerId = (await request('/auth/me', 'GET', undefined, farmer)).data.user.id;
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`)).status, 404);
+    const location = { subCounty: 'Naivasha', farmLocation: 'Test farm near town', landmarks: 'Test landmark', visitInstructions: 'Call ahead', farmSizeAcres: 2.5 };
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`, 'PUT', location)).status, 401);
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`, 'PUT', location, buyer)).status, 403);
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`, 'PUT', { ...location, farmSizeAcres: '2' }, farmer)).status, 422);
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`, 'PUT', location, farmer)).status, 200);
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`)).data.farmLocation, location.farmLocation);
+    assert.equal((await request('/skillbridge/requests')).status, 401);
+    assert.equal((await request('/skillbridge/requests', 'GET', undefined, buyer)).data.consultations.length, 0);
     assert.equal((await request('/auth/login', 'POST', { email: 'grace@agroconnect.local', password: {} })).status, 401);
     for (const path of ['/auth/register', '/auth/login', '/produce', '/products', '/orders', '/orders/1/status']) {
       const method = path.endsWith('/status') ? 'PATCH' : 'POST';
@@ -72,6 +104,7 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     assert.equal(placed.status, 201);
     assert.equal(placed.data.order.total, 620);
     assert.equal(await stock(), before - 2);
+    assert.equal((await request('/products/1/inventory')).data.stock, inventory.data.stock - 1);
     const id = placed.data.order.id;
     const orders = async (token) => (await request('/orders', 'GET', undefined, token)).data.orders;
     assert.equal((await orders(farmer))[0].total, 170);
@@ -101,19 +134,19 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     await stop();
     await start();
     const persisted = (await orders(buyer)).find((order) => order.id === id);
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`)).data.farmLocation, location.farmLocation);
     assert.deepEqual(persisted.sellers.map((portion) => portion.status).sort(), ['cancelled', 'fulfilled']);
     await stop();
     // Simulate a database made before the seller-status migration.
-    const { createClient } = await import('@libsql/client');
-    const legacy = createClient({ url: pathToFileURL(join(directory, 'test.db')).href });
-    await legacy.execute('DROP TABLE order_sellers');
-    legacy.close();
+    // A separate process releases native SQLite file handles reliably on Windows.
+    const legacy = spawnSync(process.execPath, ['--input-type=module', '-e', "import { createClient } from '@libsql/client'; import { pathToFileURL } from 'node:url'; const db = createClient({ url: pathToFileURL(process.argv[1]).href }); try { await db.execute('DROP TABLE order_sellers'); } finally { db.close(); }", join(directory, 'test.db')], { encoding: 'utf8' });
+    assert.equal(legacy.status, 0, legacy.stderr);
     await start();
     const migrated = (await orders(buyer)).find((order) => order.id === id);
     assert.equal(migrated.sellers.length, 2);
     assert.ok(migrated.sellers.every((portion) => portion.status === 'fulfilled'));
   } finally {
     if (child && child.exitCode === null && child.signalCode === null) await stop();
-    rmSync(directory, { recursive: true, force: true });
+    rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

@@ -3,6 +3,9 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from './db.js';
+import { createSkillBridgeRouter } from './skillbridge.js';
+import { createConsultationRouter } from './consultations.js';
+import { createPartnerProviderRouter } from './partner-provider.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -12,7 +15,11 @@ if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || jwtSecr
 }
 
 const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean);
-app.use(cors({ origin: allowedOrigins?.length ? allowedOrigins : process.env.NODE_ENV !== 'production' }));
+app.use(cors((req, callback) => {
+  const method = req.method === 'OPTIONS' ? req.headers['access-control-request-method'] : req.method;
+  const publicRead = ['GET', 'HEAD'].includes(method) && /^\/api\/(?:health|farmers(?:\/[^/]+(?:\/farm-location)?)?|products(?:\/[^/]+(?:\/(?:detail|inventory))?)?|produce(?:\/[^/]+(?:\/detail)?)?)$/.test(req.path);
+  callback(null, { origin: publicRead ? '*' : allowedOrigins?.length ? allowedOrigins : process.env.NODE_ENV !== 'production' });
+}));
 app.use('/api', (req, res, next) => {
   if (!['POST', 'PUT', 'PATCH'].includes(req.method)) return next();
   if (!req.headers['content-type']) return sendError(res, 400, 'Send a JSON request body.');
@@ -86,7 +93,7 @@ function listingSelect(table, quantityColumn, extraFields = '') {
     SELECT ${table}.id, ${table}.owner_id AS ownerId, ${table}.title, ${table}.category,
       ${table}.price, ${table}.unit, ${table}.${quantityColumn} AS quantity, ${table}.county,
       ${table}.description, ${table}.created_at AS createdAt, ${table}.updated_at AS updatedAt,
-      users.full_name AS sellerName, users.phone AS sellerPhone, users.role AS sellerRole${extraFields}
+      users.full_name AS sellerName, users.phone AS sellerPhone, users.role AS sellerRole${table === 'products' && !extraFields.includes('AS stock') ? ', products.stock AS stock' : ''}${extraFields}
     FROM ${table}
     JOIN users ON users.id = ${table}.owner_id
   `;
@@ -124,6 +131,14 @@ async function ownerOrNotFound(req, res, table, id) {
 }
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/skillbridge', createSkillBridgeRouter());
+app.use('/api/skillbridge/requests', createConsultationRouter({ db, authenticate }));
+app.use('/api', createPartnerProviderRouter({ db, authenticate, listingSelect }));
+
+app.param('id', (req, res, next, id) => {
+  if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) return sendError(res, 400, 'Use a positive integer resource ID.');
+  return next();
+});
 
 app.post('/api/auth/register', async (req, res) => {
   const { data, fields } = validateRegistration(req.body);
@@ -216,7 +231,7 @@ app.get('/api/products', async (req, res) => {
   const county = cleanText(req.query.county);
   const category = cleanText(req.query.category);
   const kind = cleanText(req.query.kind);
-  let sql = `${listingSelect('products', 'stock', ', products.kind')} WHERE 1 = 1`;
+  let sql = `${listingSelect('products', 'stock', ', products.kind, products.stock AS stock')} WHERE 1 = 1`;
   const parameters = [];
   if (['input', 'service'].includes(kind)) { sql += ' AND products.kind = ?'; parameters.push(kind); }
   if (search) { sql += ' AND (products.title LIKE ? OR products.description LIKE ?)'; parameters.push(`%${search}%`, `%${search}%`); }

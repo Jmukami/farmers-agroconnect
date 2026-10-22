@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import './index.css';
+import './Index.css';
 import AuthDialog from './components/AuthDialog';
 import AppShell from './components/AppShell';
 import CartPanel from './components/CartPanel';
@@ -9,6 +9,7 @@ import { useApp } from './context/useApp';
 import ActivityPage from './views/ActivityPage';
 import MarketplacePage from './views/MarketplacePage';
 import SuppliesPage from './views/SuppliesPage';
+import ExpertsPage from './views/ExpertsPage';
 
 function Application() {
   const { loading, toast } = useApp();
@@ -16,7 +17,7 @@ function Application() {
   const [cartOpen, setCartOpen] = useState(false);
   if (loading.app) return <FullScreenLoader />;
 
-  const page = activePage === 'supplies' ? <SuppliesPage /> : activePage === 'activity' ? <ActivityPage /> : <MarketplacePage />;
+  const page = activePage === 'experts' ? <ExpertsPage /> : activePage === 'supplies' ? <SuppliesPage /> : activePage === 'activity' ? <ActivityPage /> : <MarketplacePage />;
   return <><AppShell activePage={activePage} onNavigate={setActivePage} onCart={() => setCartOpen(true)}>{page}</AppShell><CartPanel open={cartOpen} onClose={() => setCartOpen(false)} /><AuthDialog /><Toast toast={toast} /></>;
 }
 

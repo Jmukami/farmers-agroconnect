@@ -1,6 +1,25 @@
 # AgroConnect API
 
+Expert advice integrates SkillBridge's agricultural directory, estate/proximity filtering, profiles, reviews, availability and consultation submission/history. See [SkillBridge integration](docs/SKILLBRIDGE.md), the [downstream guide](docs/DOWNSTREAM_INTEGRATION.md), and the [integration log](INTEGRATION_LOG.MD).
+
 AgroConnect is a REST API for an agricultural marketplace in Kenya. It lets farmers publish produce, suppliers advertise farm inputs and services, and buyers discover sellers and place orders. It is intended for frontend developers and integration partners building farmer directories, catalogues, and purchasing workflows.
+
+## Live API
+
+The API is deployed on Render with persistent data in Turso.
+
+- **API base URL:** https://farmers-agroconnect.onrender.com/api
+- **Health check:** https://farmers-agroconnect.onrender.com/api/health
+- **Produce catalogue:** https://farmers-agroconnect.onrender.com/api/produce
+
+```bash
+curl -i 'https://farmers-agroconnect.onrender.com/api/health'
+curl -i 'https://farmers-agroconnect.onrender.com/api/produce?search=tomatoes'
+```
+
+This deployment serves the API only. The site root has no frontend and may return 404; use the `/api` endpoints. Render Free can take about a minute to wake after 15 minutes of inactivity.
+
+The walkthrough below uses a fresh local database. To call the deployed API, replace `http://localhost:3001/api` with `https://farmers-agroconnect.onrender.com/api`. Live IDs, stock, timestamps, and accounts can differ from these examples; use current listing IDs and values returned by your requests. Write requests change the shared hosted database.
 
 ## 1. Run locally from a clean clone
 
@@ -69,7 +88,7 @@ Response: **200 OK**
 }
 ```
 
-The responses in this guide were captured from a fresh, isolated local database. Timestamps use UTC in `YYYY-MM-DD HH:mm:ss` format (Nairobi is UTC+3). Timestamps and JWTs vary per run; IDs and quantities match when you follow this guide once on a fresh database. Only JWT values are replaced with explanatory text. Always use the token returned by your own request. No hosted API URL is configured in this repository.
+The responses in this guide were captured from a fresh, isolated local database. Timestamps use UTC in `YYYY-MM-DD HH:mm:ss` format (Nairobi is UTC+3). Timestamps and JWTs vary per run; IDs and quantities match when you follow this guide once on a fresh database. Only JWT values are replaced with explanatory text. Always use the token returned by your own request. The hosted API is available at https://farmers-agroconnect.onrender.com/api.
 
 ## 3. Authenticate
 
@@ -258,7 +277,7 @@ Response: **200 OK**
 }
 ```
 
-Both `GET /produce` and `GET /products` accept optional `search` (title/description substring), `county`, and `category` (case-sensitive exact matches). Products also accept `kind=input` or `kind=service`. Use `curl --get --data-urlencode 'search=soil testing' http://localhost:3001/api/products` for values containing spaces. Collections return all matches without pagination; no matches returns `{"listings":[]}`. Product stock is exposed as **quantity** in the running API.
+Both `GET /produce` and `GET /products` accept optional `search` (title/description substring), `county`, and `category` (case-sensitive exact matches). Products also accept `kind=input` or `kind=service`. Use `curl --get --data-urlencode 'search=soil testing' http://localhost:3001/api/products` for values containing spaces. Collections return all matches without pagination; no matches returns `{"listings":[]}`. Product responses expose both **quantity** and **stock**, with equal values; writes still use **quantity**. Single-item reads use `GET /products/{id}` or `GET /produce/{id}` and return `{listing}`.
 
 ## 5. Place and manage an order
 

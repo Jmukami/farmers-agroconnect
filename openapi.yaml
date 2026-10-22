@@ -1,15 +1,23 @@
 openapi: 3.0.0
 info:
   title: AgroConnect API
-  description: |
-    AgroConnect is a full-stack digital agricultural marketplace and service platform connecting Kenyan farmers, farm input/service suppliers, and buyers.
-    
-    JSON write requests require an object body and Content-Type application/json.
-    Missing or malformed bodies return 400, unsupported media types return 415,
-    and bodies above 100 KB return 413. Numeric fields require JSON numbers.
-    Timestamps are UTC. County and category filters are case-sensitive.
+  description: >
+    AgroConnect is a full-stack digital agricultural marketplace and service platform connecting Kenyan farmers, farm
+    input/service suppliers, and buyers.
 
-    This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both internally and  our downstream integration partners: **Campus Hub** / Team 7).
+
+    JSON write requests require an object body and Content-Type application/json.
+
+    Missing or malformed bodies return 400, unsupported media types return 415,
+
+    and bodies above 100 KB return 413. Numeric fields require JSON numbers.
+
+    AgroConnect timestamps are UTC. SkillBridge availability contains timezone-free wall-clock values; its timezone is
+    unconfirmed. County and category filters are case-sensitive.
+
+
+    This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both internally
+    and  our downstream integration partners: **Campus Hub** / Team 7).
   version: 1.0.0
   license:
     name: MIT
@@ -17,6 +25,12 @@ info:
   contact:
     name: AgroConnect Team (Team 6)
     url: https://github.com/Jmukami/farmers-agroconnect
+
+servers:
+  - url: https://farmers-agroconnect.onrender.com
+    description: Hosted API on Render; endpoint paths already include /api
+  - url: http://localhost:3001
+    description: Local development
 
 tags:
   - name: Authentication
@@ -29,16 +43,209 @@ tags:
     description: Farm inputs, equipment, and agricultural service catalog (Downstream for Campus Hub Need 3 & 4)
   - name: Orders
     description: Multi-item purchasing, transactional checkout, and order status workflow
-  - name: Proposed Endpoints (Campus Hub)
-    description: Planned additions/enhancements to fulfill Campus Hub downstream requirements
+  - name: SkillBridge
+    description: Agricultural expert discovery and consultation requests
+  - name: Health
 
 paths:
+  /api/skillbridge/experts:
+    get:
+      tags:
+        - SkillBridge
+      summary: Discover agricultural experts from SkillBridge
+      description: Agricultural experts matched against the Agriculture skill catalogue. Estate and sort/coordinates are
+        forwarded to SkillBridge. Search and agricultural skill matching are local. Results use the requested sort.
+      operationId: discoverSkillBridgeExperts
+      security: []
+      parameters:
+        - name: skill
+          in: query
+          schema:
+            type: string
+          description: Agricultural skill name, matched case-insensitively.
+        - name: estate
+          in: query
+          schema:
+            type: string
+          description: Estate passed to SkillBridge; upstream matching semantics apply.
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Case-insensitive search of name, biography and skills.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - rating
+              - proximity
+            default: rating
+        - name: lat
+          in: query
+          description: Both coordinates are required for proximity sorting; zero is valid.
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+        - name: lng
+          in: query
+          description: Both coordinates are required for proximity sorting; zero is valid.
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - rating
+              - proximity
+            default: rating
+        - name: lat
+          in: query
+          description: Both coordinates are required for proximity sorting; zero is valid.
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+        - name: lng
+          in: query
+          description: Both coordinates are required for proximity sorting; zero is valid.
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+      responses:
+        "200":
+          description: Experts, agricultural skills and estate options from the returned upstream expert set.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - experts
+                  - skills
+                  - estates
+                properties:
+                  experts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SkillBridgeExpert"
+                  skills:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SkillBridgeSkill"
+                  estates:
+                    type: array
+                    items:
+                      type: string
+        "400":
+          description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/skillbridge/experts/{id}:
+    get:
+      tags: [ SkillBridge ]
+      summary: View an agricultural expert, reviews and availability
+      description: Agricultural expert with independent review and availability sections. Failed optional sections are null
+        and produce sanitized operational logs. Slot timezone is unconfirmed; consultation submission requires an
+        explicit timestamp.
+      operationId: getSkillBridgeExpert
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Expert profile with optional reviews and availability.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ expert, reviews, availability ]
+                properties:
+                  expert: { $ref: '#/components/schemas/SkillBridgeExpert' }
+                  reviews:
+                    type: object
+                    nullable: true
+                    required: [ rating, reviewCount, completedSessions ]
+                    properties:
+                      rating: { type: number }
+                      reviewCount: { type: integer }
+                      completedSessions: { type: integer }
+                  availability:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      required: [ date, startTime, durationMinutes ]
+                      properties:
+                        date: { type: string, format: date }
+                        startTime: { type: string, example: '09:00:00' }
+                        durationMinutes: { type: integer, minimum: 1 }
+        '400':
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        '404':
+          description: Expert missing or has no agricultural skills; JSON contains message.
+        '502':
+          description: Partner rate limit, invalid response or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        '503':
+          description: Partner rate limit, invalid response or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Partner rate limit, invalid response or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/auth/register:
     post:
       tags:
         - Authentication
       summary: Register a new user account
-      description: Creates a user account with role `farmer`, `buyer`, or `supplier` and returns the user profile with a JWT session token.
+      description: Creates a user account with role `farmer`, `buyer`, or `supplier` and returns the user profile with a JWT
+        session token.
       operationId: registerUser
       security: []
       requestBody:
@@ -66,6 +273,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/auth/login:
     post:
@@ -94,6 +319,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/auth/me:
     get:
@@ -126,7 +369,8 @@ paths:
       tags:
         - Farmers
       summary: List registered farmer profiles
-      description: Retrieves a public directory of all registered farmers, sorted alphabetically by name. Used by downstream consumers for discovery.
+      description: Retrieves a public directory of all registered farmers, sorted alphabetically by name. Used by downstream
+        consumers for discovery.
       operationId: listFarmers
       security: []
       responses:
@@ -182,13 +426,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/produce:
     get:
       tags:
         - Produce Listings
       summary: Browse and filter produce listings
-      description: Returns a list of active farmer harvest listings, sorted by newest first. Supports optional keyword search, county, and category filtering.
+      description: Returns a list of active farmer harvest listings, sorted by newest first. Supports optional keyword search,
+        county, and category filtering.
       operationId: listProduce
       security: []
       parameters:
@@ -274,6 +525,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/produce/{id}:
     put:
@@ -325,6 +594,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     delete:
       tags:
@@ -362,6 +649,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      tags:
+        - Produce Listings
+      summary: Get produce listing by ID
+      operationId: getProduceById
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - listing
+                properties:
+                  listing:
+                    $ref: "#/components/schemas/ProduceListing"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/products:
     get:
@@ -380,7 +710,7 @@ paths:
           description: Filter by offering type
           schema:
             type: string
-            enum: [input, service]
+            enum: [ input, service ]
         - name: search
           in: query
           required: false
@@ -425,7 +755,8 @@ paths:
       tags:
         - Products & Services
       summary: Create a product or service offering
-      description: Publishes a new farm input or agricultural service offering. Restricted to authenticated users with the `supplier` role.
+      description: Publishes a new farm input or agricultural service offering. Restricted to authenticated users with the
+        `supplier` role.
       operationId: createProduct
       security:
         - bearerAuth: []
@@ -463,6 +794,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/products/{id}:
     put:
@@ -514,6 +863,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     delete:
       tags:
@@ -551,6 +918,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      tags:
+        - Products & Services
+      summary: Get product offering by ID
+      operationId: getProductById
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - listing
+                properties:
+                  listing:
+                    $ref: "#/components/schemas/Product"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/orders:
     post:
@@ -610,12 +1020,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     get:
       tags:
         - Orders
       summary: List user orders
-      description: Buyers receive all items and the full total. Sellers receive only their items, subtotal, and portion status. Both receive a sellers array scoped to their visibility.
+      description: Buyers receive all items and the full total. Sellers receive only their items, subtotal, and portion
+        status. Both receive a sellers array scoped to their visibility.
       operationId: listOrders
       security:
         - bearerAuth: []
@@ -706,6 +1135,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ---------------------------------------------------------------------------
   # PROPOSED ENDPOINTS (PLANNED FOR CAMPUS HUB REQUIREMENTS - ENDPOINT_LIST.MD SECTION 2)
@@ -714,136 +1161,551 @@ paths:
   /api/farmers/{id}/farm-location:
     get:
       tags:
-        - Proposed Endpoints (Campus Hub)
-      summary: "[PROPOSED] Get farm physical location & visit instructions"
-      description: |
-        *Planned endpoint to fulfill Campus Hub Need 2 (access locations of members' farms to facilitate farm visits).*
-        Returns specific farm geographic location, sub-county/ward, landmarks, acreage, and farm visit contact instructions.
+        - Farmers
+      summary: Read a farmer-published farm location
       operationId: getFarmerFarmLocation
       security: []
       parameters:
         - name: id
           in: path
           required: true
-          description: Farmer user ID
           schema:
             type: integer
-            example: 1
+            minimum: 1
       responses:
-        '200':
-          description: Detailed farm location and visitation guidelines
+        "200":
+          description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FarmLocation'
-        '404':
-          description: Farmer not found
+                $ref: "#/components/schemas/FarmLocation"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      description: Returns 404 when the farmer does not exist or has not published a farm location. County alone is not a
+        visit address.
+    put:
+      tags:
+        - Farmers
+      summary: Publish or replace your own farm location
+      description: Farmer owner only. Omitted optional text values become empty strings; omitted farmSizeAcres becomes null.
+        Published location and visit details are publicly readable.
+      operationId: publishFarmLocation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FarmLocationInput"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FarmLocation"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid or unauthorized request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid or unauthorized request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid or unauthorized request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/products/{id}/detail:
     get:
       tags:
-        - Proposed Endpoints (Campus Hub)
-      summary: "[PROPOSED] Get single product offering by ID"
-      description: |
-        *Planned endpoint to fulfill Campus Hub Need 3 (read farming product information) and Need 4 (access inventory details).*
-        Returns complete product metadata, specifications, live stock, and supplier contact information for dedicated website display.
+        - Products & Services
+      summary: Get product offering by ID
       operationId: getProductDetailById
       security: []
       parameters:
         - name: id
           in: path
           required: true
-          description: Product offering ID
           schema:
             type: integer
-            example: 1
+            minimum: 1
       responses:
-        '200':
-          description: Single product offering details
+        "200":
+          description: Success
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - product
                 properties:
                   product:
-                    $ref: '#/components/schemas/Product'
-        '404':
-          description: Product not found
+                    $ref: "#/components/schemas/Product"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/produce/{id}/detail:
     get:
       tags:
-        - Proposed Endpoints (Campus Hub)
-      summary: "[PROPOSED] Get single harvest produce listing by ID"
-      description: |
-        *Planned endpoint to fulfill Campus Hub Need 3 (product information) and Need 4 (available quantity).*
-        Returns complete produce listing details and seller contact information for dedicated website display.
+        - Produce Listings
+      summary: Get produce listing by ID
       operationId: getProduceDetailById
       security: []
       parameters:
         - name: id
           in: path
           required: true
-          description: Produce listing ID
           schema:
             type: integer
-            example: 1
+            minimum: 1
       responses:
-        '200':
-          description: Single harvest produce listing details
+        "200":
+          description: Success
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - produce
                 properties:
                   produce:
-                    $ref: '#/components/schemas/ProduceListing'
-        '404':
-          description: Listing not found
+                    $ref: "#/components/schemas/ProduceListing"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/products/{id}/inventory:
     get:
       tags:
-        - Proposed Endpoints (Campus Hub)
-      summary: "[PROPOSED] Dedicated real-time inventory check"
-      description: |
-        *Planned endpoint to fulfill Campus Hub Need 4 (access inventory details and stock levels).*
-        Fast lightweight query returning current stock count and availability status for a product.
+        - Products & Services
+      summary: Read current product inventory
       operationId: getProductInventory
       security: []
       parameters:
         - name: id
           in: path
           required: true
-          description: Product ID
           schema:
             type: integer
-            example: 1
+            minimum: 1
       responses:
-        '200':
-          description: Real-time inventory status
+        "200":
+          description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InventoryStatus'
-        '404':
-          description: Product not found
+                $ref: "#/components/schemas/InventoryStatus"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      description: "Live inventory snapshot with Cache-Control: no-store. Stock is not reserved by this read; order creation
+        may still return 409."
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Service health
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+  /api/skillbridge/experts/{id}/reviews:
+    get:
+      tags:
+        - SkillBridge
+      summary: Read expert reviews
+      operationId: getSkillBridgeReviews
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - reviews
+                properties:
+                  reviews:
+                    $ref: "#/components/schemas/SkillBridgeReviews"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Partner rate limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Invalid partner response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Partner unavailable or timed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/skillbridge/experts/{id}/availability:
+    get:
+      tags:
+        - SkillBridge
+      summary: Read expert availability
+      operationId: getSkillBridgeAvailability
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - availability
+                properties:
+                  availability:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SkillBridgeSlot"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Resource not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Partner rate limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Invalid partner response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Partner unavailable or timed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/skillbridge/skills:
+    get:
+      tags:
+        - SkillBridge
+      summary: Read categorized SkillBridge skills
+      operationId: getSkillBridgeSkills
+      security: []
+      parameters:
+        - name: tag
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - skills
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SkillBridgeSkill"
+        "400":
+          description: Invalid request or upstream failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invalid request or upstream failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Invalid request or upstream failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Invalid request or upstream failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Invalid request or upstream failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/skillbridge/requests:
+    get:
+      tags:
+        - SkillBridge
+      summary: Read your consultation submission history
+      description: Local records only; partnerStatus is the submission response, not a live status. Submitting or unknown may
+        represent a received booking. No upstream retrieval/cancellation API is available.
+      operationId: listConsultations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - consultations
+                properties:
+                  consultations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Consultation"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - SkillBridge
+      summary: Submit a consultation request
+      description: Requires a future explicit date-time with seconds and Z or a numeric timezone offset. farmerName comes from
+        the signed-in account. Duplicate user/expert/UTC appointment combinations return 409, including unknown/rejected
+        attempts. No automatic retries. An ambiguous partner outcome is persisted as unknown; contact SkillBridge before
+        trying another appointment. Published availability has an unconfirmed timezone and is not automatically
+        converted or matched.
+      operationId: createConsultation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expertId
+                - topic
+                - date
+              properties:
+                expertId:
+                  type: integer
+                  minimum: 1
+                topic:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                date:
+                  type: string
+                  format: date-time
+                  example: 2026-10-23T10:00:00+03:00
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - consultation
+                properties:
+                  consultation:
+                    $ref: "#/components/schemas/Consultation"
+        "400":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
+            attempt was stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
+            attempt was stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
+            attempt was stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Invalid resource ID or JSON request body, oversized body or unsupported content type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
+            attempt was stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
+            attempt was stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
+            attempt was stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
+            attempt was stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:
@@ -854,6 +1716,24 @@ components:
       description: Pass standard JWT session token received from `/api/auth/login` or `/api/auth/register`.
 
   schemas:
+    SkillBridgeExpert:
+      type: object
+      required: [ id, name, estate, rating, skills ]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        estate: { type: string }
+        rating: { type: number }
+        bio: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        skills:
+          type: array
+          items: { type: string }
+        distanceKm:
+          type: number
+          minimum: 0
+          description: Returned for proximity sorting
     User:
       type: object
       properties:
@@ -875,7 +1755,7 @@ components:
           example: Nakuru
         role:
           type: string
-          enum: [farmer, buyer, supplier]
+          enum: [ farmer, buyer, supplier ]
           example: farmer
         focus:
           type: string
@@ -912,7 +1792,7 @@ components:
           example: Nakuru
         role:
           type: string
-          enum: [farmer, buyer, supplier]
+          enum: [ farmer, buyer, supplier ]
           example: farmer
         password:
           type: string
@@ -968,6 +1848,13 @@ components:
         createdAt:
           type: string
           example: '2026-08-24 17:30:00'
+      required:
+        - id
+        - fullName
+        - phone
+        - county
+        - focus
+        - createdAt
 
     FarmLocation:
       type: object
@@ -996,6 +1883,11 @@ components:
         farmSizeAcres:
           type: number
           example: 5
+          nullable: true
+        visitInstructions:
+          type: string
+        updatedAt:
+          type: string
 
     ProduceListing:
       type: object
@@ -1045,6 +1937,22 @@ components:
         sellerRole:
           type: string
           example: farmer
+      required:
+        - id
+        - ownerId
+        - title
+        - category
+        - price
+        - unit
+        - quantity
+        - county
+        - description
+        - availableFrom
+        - createdAt
+        - updatedAt
+        - sellerName
+        - sellerPhone
+        - sellerRole
 
     CreateProduceRequest:
       type: object
@@ -1100,7 +2008,7 @@ components:
           example: 3
         kind:
           type: string
-          enum: [input, service]
+          enum: [ input, service ]
           example: input
         title:
           type: string
@@ -1138,6 +2046,27 @@ components:
         sellerRole:
           type: string
           example: supplier
+        quantity:
+          type: integer
+          minimum: 0
+          description: Available units. Kept for compatibility; stock contains the same value.
+      required:
+        - id
+        - ownerId
+        - kind
+        - title
+        - category
+        - price
+        - unit
+        - quantity
+        - stock
+        - county
+        - description
+        - createdAt
+        - updatedAt
+        - sellerName
+        - sellerPhone
+        - sellerRole
 
     CreateProductRequest:
       type: object
@@ -1153,7 +2082,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [input, service]
+          enum: [ input, service ]
           example: input
         title:
           type: string
@@ -1198,7 +2127,7 @@ components:
           example: 1
         type:
           type: string
-          enum: [produce, product]
+          enum: [ produce, product ]
           example: produce
         quantity:
           type: integer
@@ -1262,7 +2191,7 @@ components:
           example: 3250
         status:
           type: string
-          enum: [pending, confirmed, fulfilled, cancelled]
+          enum: [ pending, confirmed, fulfilled, cancelled ]
           example: pending
         createdAt:
           type: string
@@ -1277,7 +2206,7 @@ components:
                 type: integer
               status:
                 type: string
-                enum: [pending, confirmed, fulfilled, cancelled]
+                enum: [ pending, confirmed, fulfilled, cancelled ]
         items:
           type: array
           items:
@@ -1290,7 +2219,7 @@ components:
       properties:
         status:
           type: string
-          enum: [confirmed, fulfilled, cancelled]
+          enum: [ confirmed, fulfilled, cancelled ]
           example: confirmed
 
     InventoryStatus:
@@ -1327,3 +2256,112 @@ components:
             type: string
           example:
             email: Enter a valid email address.
+        consultationId:
+          type: integer
+      required:
+        - message
+    FarmLocationInput:
+      type: object
+      required:
+        - subCounty
+        - farmLocation
+      properties:
+        subCounty:
+          type: string
+          minLength: 2
+          maxLength: 1000
+        farmLocation:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        landmarks:
+          type: string
+          maxLength: 1000
+        visitInstructions:
+          type: string
+          maxLength: 1000
+        farmSizeAcres:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          nullable: true
+    SkillBridgeSkill:
+      type: object
+      required:
+        - id
+        - name
+        - category
+      properties:
+        id: &a4
+          type: integer
+        name: &a3
+          type: string
+        category: *a3
+        offeredBy: *a4
+    SkillBridgeReviews:
+      type: object
+      required:
+        - rating
+        - reviewCount
+        - completedSessions
+      properties:
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+          minimum: 0
+        completedSessions:
+          type: integer
+          minimum: 0
+    SkillBridgeSlot:
+      type: object
+      required:
+        - date
+        - startTime
+        - durationMinutes
+      properties:
+        date:
+          type: string
+          format: date
+        startTime:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$
+        durationMinutes:
+          type: integer
+          minimum: 1
+    Consultation:
+      type: object
+      required:
+        - id
+        - expertId
+        - expertName
+        - topic
+        - date
+        - submissionState
+        - requestId
+        - partnerStatus
+        - createdAt
+      properties:
+        id: &a5
+          type: integer
+        expertId: *a5
+        expertName: &a6
+          type: string
+        topic: *a6
+        date:
+          type: string
+          format: date-time
+        submissionState:
+          type: string
+          enum:
+            - submitting
+            - submitted
+            - unknown
+            - rejected
+        requestId:
+          type: integer
+          nullable: true
+        partnerStatus:
+          type: string
+          nullable: true
+        createdAt: *a6

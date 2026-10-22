@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from './db.js';
 import { createSkillBridgeRouter } from './skillbridge.js';
+import { createConsultationRouter } from './consultations.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -126,6 +127,7 @@ async function ownerOrNotFound(req, res, table, id) {
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/skillbridge', createSkillBridgeRouter());
+app.use('/api/skillbridge/requests', createConsultationRouter({ db, authenticate }));
 
 app.post('/api/auth/register', async (req, res) => {
   const { data, fields } = validateRegistration(req.body);

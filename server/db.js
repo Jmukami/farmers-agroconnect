@@ -168,4 +168,20 @@ await db.transaction(async () => {
     FROM orders JOIN order_items ON order_items.order_id = orders.id`);
 });
 
+await db.exec(`
+  CREATE TABLE IF NOT EXISTS consultations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    expert_id INTEGER NOT NULL,
+    expert_name TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    appointment_at TEXT NOT NULL,
+    submission_state TEXT NOT NULL CHECK(submission_state IN ('submitting', 'submitted', 'unknown', 'rejected')),
+    partner_request_id INTEGER,
+    partner_status TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, expert_id, appointment_at)
+  );
+`);
+
 export default db;

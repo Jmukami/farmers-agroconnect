@@ -1,5 +1,7 @@
 # AgroConnect REST API Reference
 
+For the current integration contract, use [openapi.yaml](../openapi.yaml), [the downstream guide](DOWNSTREAM_INTEGRATION.md), and [SkillBridge setup](SKILLBRIDGE.md). [INTEGRATION_LOG.MD](../INTEGRATION_LOG.MD) records failures and deployment differences. The reference below covers the original API.
+
 The AgroConnect backend provides a RESTful JSON API hosted on Render, with persistent data stored in Turso. Local development uses port `3001` and the `/api` base path.
 
 ## Base URL & General Conventions

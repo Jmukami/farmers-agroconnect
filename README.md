@@ -1,5 +1,7 @@
 # AgroConnect API
 
+Expert advice integrates SkillBridge's agricultural directory, estate/proximity filtering, profiles, reviews, availability and consultation submission/history. See [SkillBridge integration](docs/SKILLBRIDGE.md), the [downstream guide](docs/DOWNSTREAM_INTEGRATION.md), and the [integration log](INTEGRATION_LOG.MD).
+
 AgroConnect is a REST API for an agricultural marketplace in Kenya. It lets farmers publish produce, suppliers advertise farm inputs and services, and buyers discover sellers and place orders. It is intended for frontend developers and integration partners building farmer directories, catalogues, and purchasing workflows.
 
 ## Live API
@@ -275,7 +277,7 @@ Response: **200 OK**
 }
 ```
 
-Both `GET /produce` and `GET /products` accept optional `search` (title/description substring), `county`, and `category` (case-sensitive exact matches). Products also accept `kind=input` or `kind=service`. Use `curl --get --data-urlencode 'search=soil testing' http://localhost:3001/api/products` for values containing spaces. Collections return all matches without pagination; no matches returns `{"listings":[]}`. Product stock is exposed as **quantity** in the running API.
+Both `GET /produce` and `GET /products` accept optional `search` (title/description substring), `county`, and `category` (case-sensitive exact matches). Products also accept `kind=input` or `kind=service`. Use `curl --get --data-urlencode 'search=soil testing' http://localhost:3001/api/products` for values containing spaces. Collections return all matches without pagination; no matches returns `{"listings":[]}`. Product responses expose both **quantity** and **stock**, with equal values; writes still use **quantity**. Single-item reads use `GET /products/{id}` or `GET /produce/{id}` and return `{listing}`.
 
 ## 5. Place and manage an order
 

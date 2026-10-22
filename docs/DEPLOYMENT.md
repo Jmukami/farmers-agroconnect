@@ -45,7 +45,7 @@ If creating a Web Service manually instead of using the Blueprint, select Docker
 
 Render supplies `PORT`; no manual port setting is needed. Production refuses to start without a remote database URL and token, preventing accidental use of disposable local storage. `DATABASE_PATH` applies only to local development. Environment files are not loaded automatically.
 
-Postman, curl, and server-to-server consumers do not need CORS configuration. Browser clients require their exact origin in `CORS_ORIGINS`. JWT authentication is required independently of CORS.
+Postman, curl, and server-to-server consumers do not need CORS configuration. After deploying the integration changes, public farmer/catalogue GET/HEAD routes allow all browser origins. Authenticated browser operations still require their exact origin in `CORS_ORIGINS`; JWT authentication applies independently. The SkillBridge URL defaults to `https://skillbridge-api-p6s9.onrender.com/api` and can be overridden with `SKILLBRIDGE_BASE_URL`. Startup also creates the farm-location and consultation tables without replacing existing data.
 
 ## 3. Verify deployment
 

@@ -1,6 +1,8 @@
 # AgroConnect Database Schema Reference
 
-AgroConnect utilizes **SQLite 3** managed via `better-sqlite3`. The database file is located at `server/data/agroconnect.db` and is auto-initialized and seeded on first startup.
+AgroConnect uses SQLite-compatible **libSQL** through `@libsql/client`. Local development defaults to `server/data/agroconnect.db`; production requires remote Turso configuration. Seeding is controlled by `SEED_DEMO_DATA`. `server/db.js` is the authoritative schema and runs additive schema initialization at startup.
+
+Integration additions (22 October 2026): `farm_locations` stores farmer-owned published visit details, keyed by `farmer_id`; `consultations` stores user-owned partner submission attempts, unique by `(user_id, expert_id, appointment_at)`. See [downstream integration](DOWNSTREAM_INTEGRATION.md) and [SkillBridge integration](SKILLBRIDGE.md). Existing `order_sellers` tracks independent seller fulfilment status. The original diagram below predates these additions.
 
 ## 1. Entity-Relationship Diagram (ERD)
 

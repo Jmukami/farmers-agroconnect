@@ -5,6 +5,7 @@ import Icon from './Icon';
 const links = [
   { id: 'marketplace', label: 'Produce market' },
   { id: 'supplies', label: 'Inputs & services' },
+  { id: 'experts', label: 'Expert advice' },
   { id: 'activity', label: 'My activity' },
 ];
 

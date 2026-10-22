@@ -169,6 +169,15 @@ await db.transaction(async () => {
 });
 
 await db.exec(`
+  CREATE TABLE IF NOT EXISTS farm_locations (
+    farmer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    sub_county TEXT NOT NULL,
+    farm_location TEXT NOT NULL,
+    landmarks TEXT NOT NULL DEFAULT '',
+    visit_instructions TEXT NOT NULL DEFAULT '',
+    farm_size_acres REAL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE TABLE IF NOT EXISTS consultations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id),

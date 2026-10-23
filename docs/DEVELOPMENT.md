@@ -9,7 +9,16 @@ The main resources are users, produce listings, products (inputs or services), o
 `GET /api/farmers` and `GET /api/farmers/:id` provide the farmer contact profile required by an external consumer without exposing account emails or password data. The produce and product catalogue endpoints are public as well.
 
 
-The deployed API base URL is https://farmers-agroconnect.onrender.com/api. For local frontend testing against it, set `VITE_API_BASE_URL` to that URL before starting Vite, and allow the frontend origin in the API's `CORS_ORIGINS`. See [deployment instructions](DEPLOYMENT.md).
+The deployed API base URL is https://farmers-agroconnect.onrender.com/api. To test the local frontend against it, create a root `.env.local` (ignored by Git):
+
+```dotenv
+VITE_API_BASE_URL=/api
+API_PROXY_TARGET=https://farmers-agroconnect.onrender.com
+```
+
+Run `npm run dev:client` and open the Vite URL. Only the frontend runs locally; Vite forwards `/api` requests to the hosted backend, including sign-in and writes. No local Express server or remote CORS change is needed for this development proxy. Restart Vite after changing environment values. Use an account registered on the hosted API; local demo accounts may not exist there. Writes affect the shared hosted data.
+
+For local-backend development, remove `API_PROXY_TARGET` and leave `VITE_API_BASE_URL=/api`, then use `npm run dev`. Alternatively, set `VITE_API_BASE_URL` directly to the remote API URL for browser-to-API testing; that requires the frontend origin in the API's `CORS_ORIGINS` for authenticated routes. The proxy setting applies only to Vite development, not production builds. See [deployment instructions](DEPLOYMENT.md).
 
 ## 1. Prerequisites & Environment Setup
 

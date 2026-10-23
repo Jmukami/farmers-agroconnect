@@ -17,7 +17,7 @@ info:
 
 
     This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both internally
-    and  our downstream integration partners: **Campus Hub** / Team 7).
+    and our downstream integration partners: **Campus Hub** (Team 7).
   version: 1.0.0
   license:
     name: MIT
@@ -73,28 +73,6 @@ paths:
           schema:
             type: string
           description: Case-insensitive search of name, biography and skills.
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum:
-              - rating
-              - proximity
-            default: rating
-        - name: lat
-          in: query
-          description: Both coordinates are required for proximity sorting; zero is valid.
-          schema:
-            type: number
-            minimum: -90
-            maximum: 90
-        - name: lng
-          in: query
-          description: Both coordinates are required for proximity sorting; zero is valid.
-          schema:
-            type: number
-            minimum: -180
-            maximum: 180
         - name: sort
           in: query
           schema:

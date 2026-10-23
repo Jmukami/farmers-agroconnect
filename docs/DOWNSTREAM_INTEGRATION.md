@@ -1,8 +1,30 @@
 # Campus Hub integration
 
-Local base: `http://localhost:3001/api`. Hosted base: `https://farmers-agroconnect.onrender.com/api`. Check [INTEGRATION_LOG.MD](../INTEGRATION_LOG.MD) for deployment gaps before using newly added routes on the hosted service. [openapi.yaml](../openapi.yaml) is the contract; HTTP tests validate actual response payloads against it.
+Local base: `http://localhost:3001/api`. Hosted base: `https://farmers-agroconnect.onrender.com/api`. [openapi.yaml](../openapi.yaml) is the contract; this guide is the current consumer reference. HTTP tests validate actual response payloads against the contract. OpenAPI server URLs omit `/api` because its paths already include `/api`; do not double the prefix.
 
-ENDPOINT_LIST.md, CONTRACT_QUESTIONS.md and CONTRACT_DEVIATIONS.md are preserved unchanged at the owner's request and can contain historical information. In particular, `/api/messages` is not implemented in the current server.
+ENDPOINT_LIST.md, CONTRACT_QUESTIONS.md, CONTRACT_DEVIATIONS.md and INTEGRATION_LOG.MD are historical snapshots. Their earlier deployment gaps and endpoint proposals are not a current support matrix. In particular, `/api/messages` is not implemented in the current server.
+
+## Presentation data and handoff verification
+
+Hosted verification on **23 October 2026**: demo farmers `4` and `5` have readable published locations; demo supplier `6` owns products `1`, `2`, and `3`. All three product detail and inventory reads succeeded, with matching stock values; product `3` is the zero-stock service. Public list reads returned HTTP 200 and `Access-Control-Allow-Origin: *`. These IDs describe that verification only; discover current IDs from the lists when integrating.
+
+Run the API locally with `npm start`, then in another terminal run:
+
+```sh
+node scripts/seed-downstream.mjs
+```
+
+To populate the hosted API explicitly:
+
+```sh
+node scripts/seed-downstream.mjs https://farmers-agroconnect.onrender.com/api
+```
+
+The seeder creates two dedicated sample farmer accounts with published fictional locations, one sample supplier, and three catalogue entries: maize seed, an irrigation kit, and an out-of-stock soil testing service. All use placeholder phone numbers and reserved `.invalid` email addresses. Names and descriptions use natural presentation copy. These fixtures are synthetic presentation and integration data; addresses are not visit destinations and offerings are not real stock for purchase or fulfilment. Existing farmers are not assigned invented locations.
+
+The script prints the actual farmer and product IDs and verifies location, product detail and inventory reads. It retains a random demo password in a per-target Git-ignored `.downstream-seed-*.local` file; keep that file private and retain it for reruns. No public demo password is added to the contract. Reruns preserve existing demo locations and listings, including changed quantities; they do not reset stock. Use `--refresh-presentation` after the API URL to replace the original DEMO-prefixed product copy and location text while preserving quantities. Account names on older databases require the targeted SQL in `scripts/refresh-presentation-profiles.sql`, because the API has no profile-edit route. Run one seeder at a time. Requests are not automatically retried; after an interrupted run, rerun using the retained credentials to discover records already created.
+
+Before handoff, read `/health`, `/farmers`, and `/products`; use returned IDs to read a demo farmer's `/farm-location`, product detail, and `/inventory`. Confirm inventory `stock` equals product `quantity` and `stock`, and that `inStock` is false for the zero-stock fixture. Check browser CORS from the consumer origin. Successful reads confirm deployment independently of historical logs. Published locations for ordinary farmers can still be absent.
 
 ## Public reads
 

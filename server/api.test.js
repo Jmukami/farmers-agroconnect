@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 import { assertContract } from './contract-assertions.js';
+import { seedDownstream } from '../scripts/seed-downstream.mjs';
 
 test('API validation, atomic stock handling, seller isolation and migration', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'agro-test-'));
@@ -145,6 +146,25 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     const migrated = (await orders(buyer)).find((order) => order.id === id);
     assert.equal(migrated.sellers.length, 2);
     assert.ok(migrated.sellers.every((portion) => portion.status === 'fulfilled'));
+    const seedOptions = { baseUrl: `http://127.0.0.1:${port}/api`, password: 'isolated-demo-seed-password' };
+    const seeded = await seedDownstream(seedOptions);
+    assert.equal(seeded.farmers.length, 2);
+    assert.equal(seeded.products.length, 3);
+    const demoProducts = (await request('/products')).data.listings.filter((item) => item.ownerId === seeded.supplier);
+    assert.equal(demoProducts.length, 3);
+    assert.ok(demoProducts.every((item) => !item.title.includes('DEMO')));
+    assert.ok(demoProducts.some((item) => item.stock === 0));
+    const demoLogin = await request('/auth/login', 'POST', { email: 'supplier@downstream-demo.invalid', password: seedOptions.password });
+    const changed = { ...demoProducts[0], quantity: 3 };
+    assert.equal((await request(`/products/${changed.id}`, 'PUT', changed, demoLogin.data.token)).status, 200);
+    assert.deepEqual(await seedDownstream(seedOptions), seeded);
+    assert.equal((await request(`/products/${changed.id}/inventory`)).data.stock, 3);
+    assert.equal((await request(`/products/${changed.id}`, 'PUT', { ...changed, title: `DEMO ${changed.title}` }, demoLogin.data.token)).status, 200);
+    assert.deepEqual(await seedDownstream({ ...seedOptions, refreshPresentation: true }), seeded);
+    const refreshed = (await request(`/products/${changed.id}`)).data.listing;
+    assert.equal(refreshed.title, changed.title);
+    assert.equal(refreshed.stock, 3);
+    assert.equal((await request(`/farmers/${farmerId}/farm-location`)).data.farmLocation, location.farmLocation);
   } finally {
     if (child && child.exitCode === null && child.signalCode === null) await stop();
     rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

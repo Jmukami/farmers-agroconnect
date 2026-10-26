@@ -8,6 +8,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: API_KEYS
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: TURSO_DATABASE_URL

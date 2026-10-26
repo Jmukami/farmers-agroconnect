@@ -24,7 +24,7 @@ Optional profile sections return `null` on failure; empty availability is distin
 
 ## Consultations
 
-Send `{expertId, topic, date}` with a future timestamp containing seconds and `Z` or a numeric offset. The frontend asks for East Africa Time (UTC+03:00). It never auto-converts timezone-free availability. This is a request; the partner validates it and reservation is not guaranteed.
+Send `{expertId, topic, date}` with a future timestamp containing seconds and `Z` or a numeric offset. SkillBridge confirmed on 23 October 2026 that both parties use East Africa Time (EAT, UTC+03:00; Africa/Nairobi). Availability date/startTime values are EAT wall-clock values. The frontend displays them in EAT and interprets requested appointments in the same zone, converting to UTC for storage and submission. No viewer-local timezone conversion is used. This is a request; the partner validates it and reservation is not guaranteed.
 
 The backend derives `farmerName` from the account, normalizes the appointment to UTC, and persists an attempt before the partner POST. `(user, expert, UTC appointment)` is unique, including rejected/unknown attempts. Concurrent or repeated attempts return 409. No automatic POST retries occur.
 

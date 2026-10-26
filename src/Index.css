@@ -201,9 +201,29 @@ h1, h2, h3 { color: #16231b; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
 .expert-card, .expert-profile { background: #fff; border: 1px solid #d9e0da; border-radius: 6px; padding: 24px; }
-.expert-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.expert-card { display: flex; flex-direction: column; align-items: stretch; gap: 18px; border-radius: 14px; border-color: #dbe5dc; box-shadow: 0 4px 18px #1b543907; transition: border-color .18s, box-shadow .18s; min-width: 0; }
+.expert-card:hover, .expert-card:focus-within { border-color: #91b99a; box-shadow: 0 8px 26px #1b543912; }
+.expert-card.is-selected { border-color: #27754c; }
 .expert-card h2, .expert-card p { margin: 0; }
-.expert-card .button { margin-top: auto; }
+.expert-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.expert-partner { display: grid; gap: 7px; padding: 14px 20px; background: #fff;  border-radius: 10px; }
+.expert-partner > span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.skillbridge-wordmark { display: flex; align-items: center; gap: 8px; color: #183b2c; font-size: 20px; font-weight: 650; font-family: 'Space Grotesk', sans-serif; }
+.skillbridge-wordmark svg { flex-shrink: 0; }
+.skillbridge-wordmark-accent { color: #10b981; }
+.expert-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.expert-card-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.expert-avatar { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 17px; background: #eaf3e7; border: 1px solid #d6e6cf; color: #306044; font-size: 21px; font-weight: 750; letter-spacing: .03em; }
+.expert-rating { padding: 7px 10px; background: #fff8e7; color: #6c5010; border: 1px solid #f0e3bb; border-radius: 20px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.expert-rating-scale { font-weight: 400; }
+.expert-card-identity h2 { font-size: 23px; letter-spacing: -.025em; line-height: 1.25; }
+.expert-card .expert-place { margin-top: 6px; font-size: 13px; color: #65766b; }
+.expert-bio { color: #526358; line-height: 1.65; font-size: 14px; }
+.expert-skills { display: flex; flex-wrap: wrap; gap: 7px; list-style: none; padding: 0; margin: 0; }
+.expert-skills li { padding: 6px 10px; border-radius: 20px; border: 1px solid #dbe7d9; background: #f2f7ef; color: #355c3e; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.expert-card-footer { margin-top: auto; padding-top: 18px; border-top: 1px solid #e6ece5; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.expert-card-footer > span { color: #65766b; font-size: 12px; }
+.expert-card-footer .button { gap: 10px; }
 .expert-profile { margin-top: 28px; }
 .expert-filters label { display: grid; gap: 8px; }
 .expert-filters input, .expert-filters select { width: 100%; min-height: 42px; padding: 8px; border: 1px solid #b8c7bc; border-radius: 4px; background: #fff; color: inherit; font: inherit; }
@@ -213,3 +233,16 @@ h1, h2, h3 { color: #16231b; }
 .expert-location input, .expert-location select, .consultation-form input, .consultation-form textarea { min-height: 42px; padding: 8px; border: 1px solid #b8c7bc; border-radius: 4px; color: inherit; background: #fff; font: inherit; max-width: 100%; }
 .consultation-form { display: grid; gap: 16px; max-width: 600px; margin-bottom: 16px; }
 .consultation-form textarea { min-height: 90px; }
+.availability-panel { margin-block: 28px; padding: 24px; background: #f5f8f3; border: 1px solid #d9e4d5; border-radius: 10px; }
+.availability-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.availability-heading h3 { margin: 6px 0 0; font-size: 21px; }
+.availability-heading .eyebrow { margin: 0; }
+.timezone-badge { padding: 7px 11px; border-radius: 20px; background: #e4f0e5; color: #245337; font-size: 12px; font-weight: 650; }
+.availability-note, .availability-footnote { color: #54665a; line-height: 1.6; max-width: 760px; }
+.availability-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; margin-top: 20px; }
+.availability-day { background: white; border: 1px solid #d9e4d5; border-radius: 8px; padding: 16px; }
+.availability-day h4 { margin: 0 0 14px; color: #244731; }
+.availability-day ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.availability-day li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: #f5f8f3; border-radius: 5px; }
+.availability-day li span, .availability-footnote { font-size: 12px; }
+.consultation-panel { padding-top: 6px; }

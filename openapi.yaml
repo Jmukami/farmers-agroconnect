@@ -12,8 +12,9 @@ info:
 
     and bodies above 100 KB return 413. Numeric fields require JSON numbers.
 
-    AgroConnect timestamps are UTC. SkillBridge availability contains timezone-free wall-clock values; its
-    timezone is unconfirmed. County and category filters are case-sensitive.
+    AgroConnect timestamps are UTC. SkillBridge confirmed that availability date/startTime values use East
+    Africa Time (EAT, UTC+03:00; Africa/Nairobi), shared by both parties. County and category filters are
+    case-sensitive.
 
 
     This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both
@@ -168,8 +169,8 @@ paths:
       tags: [ SkillBridge ]
       summary: View an agricultural expert, reviews and availability
       description: Agricultural expert with independent review and availability sections. Failed optional sections
-        are null and produce sanitized operational logs. Slot timezone is unconfirmed; consultation submission
-        requires an explicit timestamp.
+        are null and produce sanitized operational logs. Slots use East Africa Time (EAT, UTC+03:00), shared
+        by both parties; consultation submission requires an explicit timestamp.
       operationId: getSkillBridgeExpert
       security:
         - apiKeyAuth: []
@@ -204,7 +205,7 @@ paths:
                       required: [ date, startTime, durationMinutes ]
                       properties:
                         date: { type: string, format: date }
-                        startTime: { type: string, example: '09:00:00' }
+                        startTime: { type: string, example: '09:00:00', description: "East Africa Time (UTC+03:00), shared by both parties." }
                         durationMinutes: { type: integer, minimum: 1 }
         '400':
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
@@ -2023,8 +2024,9 @@ paths:
       description: Requires a future explicit date-time with seconds and Z or a numeric timezone offset. farmerName
         comes from the signed-in account. Duplicate user/expert/UTC appointment combinations return 409,
         including unknown/rejected attempts. No automatic retries. An ambiguous partner outcome is persisted
-        as unknown; contact SkillBridge before trying another appointment. Published availability has an
-        unconfirmed timezone and is not automatically converted or matched.
+        as unknown; contact SkillBridge before trying another appointment. Published availability uses East
+        Africa Time (EAT, UTC+03:00) for both parties. Requested times are normalized to UTC; matching a
+        published slot or guaranteeing reservation is not performed locally.
       operationId: createConsultation
       security:
         - bearerAuth: []
@@ -2763,6 +2765,7 @@ components:
         durationMinutes:
           type: integer
           minimum: 1
+      description: Published availability in East Africa Time (EAT, UTC+03:00; Africa/Nairobi), shared by both parties.
     Consultation:
       type: object
       required:

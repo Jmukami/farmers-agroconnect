@@ -11,8 +11,8 @@ export default function ConsultationHistory() {
     apiRequest('/skillbridge/requests', { token }).then((data) => { if (current) setResult({ token, data }); }).catch((error) => { if (current) setResult({ token, error: error.message }); });
     return () => { current = false; };
   }, [token, attempt]);
-  return <section><p>This history records submissions through AgroConnect. Partner statuses are the values returned when submitted; SkillBridge does not provide status refresh or cancellation.</p>
+  return <section>
     <button className="button button-secondary" onClick={() => setAttempt((n) => n + 1)}>Refresh history</button>
-    {result?.token !== token ? <p role="status">Loading consultations…</p> : result.error ? <p role="alert">{result.error}</p> : !result.data.consultations.length ? <p>No consultation requests yet.</p> : <div className="activity-list">{result.data.consultations.map((c) => <article className="activity-card" key={c.id}><h2>{c.expertName}</h2><p>{c.topic}</p><p>{new Intl.DateTimeFormat('en-KE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Nairobi' }).format(new Date(c.date))} EAT</p><p>Submission: {c.submissionState}{c.requestId ? ` · SkillBridge #${c.requestId}: ${c.partnerStatus}` : ''}</p>{['unknown', 'submitting'].includes(c.submissionState) && <p>The outcome has not been confirmed. Contact SkillBridge before submitting another request.</p>}</article>)}</div>}
+    {result?.token !== token ? <p role="status">Loading consultations…</p> : result.error ? <p role="alert">{result.error}</p> : !result.data.consultations.length ? <p>No consultation requests yet.</p> : <div className="activity-list">{result.data.consultations.map((c) => <article className="activity-card" key={c.id}><h2>{c.expertName}</h2><p>{c.topic}</p><p>{new Intl.DateTimeFormat('en-KE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Nairobi' }).format(new Date(c.date))} EAT</p><p>{c.partnerStatus}`</p>{['unknown', 'submitting'].includes(c.submissionState) && <p>The outcome has not been confirmed. Contact SkillBridge before submitting another request.</p>}</article>)}</div>}
   </section>;
 }

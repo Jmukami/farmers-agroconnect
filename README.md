@@ -13,13 +13,43 @@ The API is deployed on Render with persistent data in Turso.
 - **Produce catalogue:** https://farmers-agroconnect.onrender.com/api/produce
 
 ```bash
-curl -i 'https://farmers-agroconnect.onrender.com/api/health'
-curl -i 'https://farmers-agroconnect.onrender.com/api/produce?search=tomatoes'
+curl -i -H 'X-API-Key: <your-api-key>' 'https://farmers-agroconnect.onrender.com/api/health'
+curl -i -H 'X-API-Key: <your-api-key>' 'https://farmers-agroconnect.onrender.com/api/produce?search=tomatoes'
 ```
 
 This deployment serves the API only. The site root has no frontend and may return 404; use the `/api` endpoints. Render Free can take about a minute to wake after 15 minutes of inactivity.
 
 The walkthrough below uses a fresh local database. To call the deployed API, replace `http://localhost:3001/api` with `https://farmers-agroconnect.onrender.com/api`. Live IDs, stock, timestamps, and accounts can differ from these examples; use current listing IDs and values returned by your requests. Write requests change the shared hosted database.
+
+## API key authentication and rate limiting
+
+Configure `API_KEYS` as a comma-separated list of private, randomly generated consumer keys in the server environment. Startup fails if none are configured. Provision a distinct key per consumer and distribute it privately; remove a key and restart to revoke it. Never commit keys or put them in URLs, logs, browser bundles, or documentation. In PowerShell set `$env:API_KEYS='<your-api-key>'` before starting. Replace the placeholder privately with your generated key.
+
+Every `/api` endpoint, including login, registration, and SkillBridge, requires the `X-API-Key` header. Only `GET`/`HEAD /api/health` and CORS `OPTIONS` preflight are exempt. An API key identifies a consumer; protected user operations still require `Authorization: Bearer <token>` and enforce ownership.
+
+```bash
+curl -i 'http://localhost:3001/api/products' -H 'X-API-Key: <your-api-key>'
+```
+
+A valid request returns **200 OK** with `{"listings":[...]}`. A missing or incorrect key returns **401 Unauthorized**:
+
+```json
+{"message":"A valid X-API-Key header is required."}
+```
+
+The shared in-memory fixed window allows **120 requests per key per 60 seconds** across all protected routes, including the frequently called product catalogue and inventory endpoint. The window begins on the first accepted request. Rejected credentials do not create limiter entries. Request 121 returns **429 Too Many Requests**, with `Retry-After` giving whole seconds until reset:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+Content-Type: application/json
+
+{"message":"Rate limit exceeded. Please try again later."}
+```
+
+The next window restores the allowance. Restarting clears counters; multiple processes have independent counters. Use a shared limiter before scaling horizontally. Keyed requests that later fail validation or JWT authentication still count.
+
+For local browser development, run API and Vite with the same `API_KEYS` environment and leave `VITE_API_BASE_URL` unset or `/api`. Vite attaches the first configured key on its server-side proxy. Never create a `VITE_` API-key variable. A deployed browser UI needs a server-side proxy with its own access controls; the API-only deployment does not supply one.
 
 ## 1. Run locally from a clean clone
 
@@ -29,10 +59,12 @@ Install Git, **Node.js 22.13 or newer in the 22.x line**, and npm (bundled with 
 git clone https://github.com/Jmukami/farmers-agroconnect.git
 cd farmers-agroconnect
 npm ci
+export API_KEYS='<your-api-key>'
+export JWT_SECRET='<your-private-jwt-secret>'
 npm start
 ```
 
-The API listens at **http://localhost:3001/api**. SQLite tables and demo data are created automatically in `server/data/agroconnect.db`; no database service, migration command, or environment file is required. Data persists across restarts. The server reads `PORT` and `JWT_SECRET` from the process environment; it does not automatically load `server/.env`. Its default signing secret and demo credentials are for local development. For production, supply a private `JWT_SECRET`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` through the environment; the hosted database replaces the local SQLite file.
+The API listens at **http://localhost:3001/api**. SQLite tables and demo data are created automatically in `server/data/agroconnect.db`; no database service or migration command is required. API_KEYS must be supplied through the environment. Data persists across restarts. The server reads `PORT` and `JWT_SECRET` from the process environment; it does not automatically load `server/.env`. A private JWT_SECRET is required in every environment; there is no default signing secret. Demo credentials are for local development. For production, supply a private `JWT_SECRET`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` through the environment; the hosted database replaces the local SQLite file.
 
 If `npm ci` fails, check Node.js is in the supported 22.x line and inspect the first npm error. Check registry/network access and retry after resolving the cause. The project now uses `@libsql/client` instead of `better-sqlite3`; local development still needs its platform-specific libSQL package, so do not omit optional dependencies. Keep the lockfile and do not disable TLS verification.
 
@@ -43,7 +75,7 @@ To run the React frontend and API together instead, use `npm run dev` (frontend 
 ### Check the API — GET /health
 
 ```bash
-curl -i 'http://localhost:3001/api/health'
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/health'
 ```
 
 Response: **200 OK**
@@ -59,7 +91,7 @@ Response: **200 OK**
 After starting the local server, copy and paste this command. Produce discovery is public, so it needs no token or account:
 
 ```bash
-curl -i 'http://localhost:3001/api/produce?search=tomatoes'
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/produce?search=tomatoes'
 ```
 
 Response: **200 OK**
@@ -99,7 +131,7 @@ Registration requires `fullName` and `county` (at least 2 characters), a valid e
 ### Register a buyer — POST /auth/register
 
 ```bash
-curl -i -X POST 'http://localhost:3001/api/auth/register' -H 'Content-Type: application/json' -d '{"fullName":"Alex Buyer","email":"alex@example.com","phone":"0712345678","county":"Nairobi","role":"buyer","password":"example-pass-123","focus":"Fresh produce"}'
+curl -i -H 'X-API-Key: <your-api-key>' -X POST 'http://localhost:3001/api/auth/register' -H 'Content-Type: application/json' -d '{"fullName":"Alex Buyer","email":"alex@example.com","phone":"0712345678","county":"Nairobi","role":"buyer","password":"example-pass-123","focus":"Fresh produce"}'
 ```
 
 Response: **201 Created**
@@ -123,7 +155,7 @@ Response: **201 Created**
 ### Sign in — POST /auth/login
 
 ```bash
-curl -i -X POST 'http://localhost:3001/api/auth/login' -H 'Content-Type: application/json' -d '{"email":"alex@example.com","password":"example-pass-123"}'
+curl -i -H 'X-API-Key: <your-api-key>' -X POST 'http://localhost:3001/api/auth/login' -H 'Content-Type: application/json' -d '{"email":"alex@example.com","password":"example-pass-123"}'
 ```
 
 Response: **200 OK**
@@ -147,13 +179,13 @@ Response: **200 OK**
 Save a fresh buyer token in your current Bash session (Node parses the JSON, so jq is not required):
 
 ```bash
-TOKEN=$(curl -sS http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{"email":"alex@example.com","password":"example-pass-123"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const r=JSON.parse(s);if(!r.token){console.error(r);process.exit(1)}process.stdout.write(r.token)})')
+TOKEN=$(curl -sS -H 'X-API-Key: <your-api-key>' http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{"email":"alex@example.com","password":"example-pass-123"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const r=JSON.parse(s);if(!r.token){console.error(r);process.exit(1)}process.stdout.write(r.token)})')
 ```
 
 ### Check your identity — GET /auth/me
 
 ```bash
-curl -i 'http://localhost:3001/api/auth/me' -H "Authorization: Bearer $TOKEN"
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/auth/me' -H "Authorization: Bearer $TOKEN"
 ```
 
 Response: **200 OK**
@@ -185,18 +217,18 @@ The following seeded accounts all use password `agroconnect`:
 Save seller tokens for the later examples in the same terminal:
 
 ```bash
-FARMER_TOKEN=$(curl -sS http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{"email":"grace@agroconnect.local","password":"agroconnect"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const r=JSON.parse(s);if(!r.token){console.error(r);process.exit(1)}process.stdout.write(r.token)})')
-SUPPLIER_TOKEN=$(curl -sS http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{"email":"rift@agroconnect.local","password":"agroconnect"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const r=JSON.parse(s);if(!r.token){console.error(r);process.exit(1)}process.stdout.write(r.token)})')
+FARMER_TOKEN=$(curl -sS -H 'X-API-Key: <your-api-key>' http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{"email":"grace@agroconnect.local","password":"agroconnect"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const r=JSON.parse(s);if(!r.token){console.error(r);process.exit(1)}process.stdout.write(r.token)})')
+SUPPLIER_TOKEN=$(curl -sS -H 'X-API-Key: <your-api-key>' http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{"email":"rift@agroconnect.local","password":"agroconnect"}' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const r=JSON.parse(s);if(!r.token){console.error(r);process.exit(1)}process.stdout.write(r.token)})')
 ```
 
-Public routes are health, farmer discovery, and GET listings. All listing writes, order routes, and `/auth/me` require authentication. Only farmers can create produce; only suppliers can create products/services. Updating or deleting a listing requires its owner's token. Any signed-in user can order another user's listing.
+Only health is key-free. Farmer discovery and GET listings require an API key but no user JWT. All listing writes, order routes, and `/auth/me` require authentication. Only farmers can create produce; only suppliers can create products/services. Updating or deleting a listing requires its owner's token. Any signed-in user can order another user's listing.
 
 ## 4. Discover farmers, inputs, and services
 
 ### List farmers — GET /farmers
 
 ```bash
-curl -i 'http://localhost:3001/api/farmers'
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/farmers'
 ```
 
 Response: **200 OK**
@@ -227,7 +259,7 @@ Response: **200 OK**
 ### Get a farmer — GET /farmers/:id
 
 ```bash
-curl -i 'http://localhost:3001/api/farmers/1'
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/farmers/1'
 ```
 
 Response: **200 OK**
@@ -248,7 +280,7 @@ Response: **200 OK**
 ### Browse inputs and services — GET /products
 
 ```bash
-curl -i 'http://localhost:3001/api/products?kind=input&search=Hybrid'
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/products?kind=input&search=Hybrid'
 ```
 
 Response: **200 OK**
@@ -286,7 +318,7 @@ Use the buyer token to order 2 kg of the seeded tomatoes (85 per kg). Send 1–2
 ### Place an order — POST /orders
 
 ```bash
-curl -i -X POST 'http://localhost:3001/api/orders' -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"items":[{"id":1,"type":"produce","quantity":2}]}'
+curl -i -H 'X-API-Key: <your-api-key>' -X POST 'http://localhost:3001/api/orders' -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"items":[{"id":1,"type":"produce","quantity":2}]}'
 ```
 
 Response: **201 Created**
@@ -305,7 +337,7 @@ Response: **201 Created**
 ### Read your orders — GET /orders
 
 ```bash
-curl -i 'http://localhost:3001/api/orders' -H "Authorization: Bearer $TOKEN"
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/orders' -H "Authorization: Bearer $TOKEN"
 ```
 
 Response: **200 OK**
@@ -341,7 +373,7 @@ Response: **200 OK**
 ### Confirm an order as its seller — PATCH /orders/:id/status
 
 ```bash
-curl -i -X PATCH 'http://localhost:3001/api/orders/1/status' -H "Authorization: Bearer $FARMER_TOKEN" -H 'Content-Type: application/json' -d '{"status":"confirmed"}'
+curl -i -H 'X-API-Key: <your-api-key>' -X PATCH 'http://localhost:3001/api/orders/1/status' -H "Authorization: Bearer $FARMER_TOKEN" -H 'Content-Type: application/json' -d '{"status":"confirmed"}'
 ```
 
 Response: **200 OK**
@@ -365,7 +397,7 @@ Listing fields: `title`, `category`, and `county` must have at least 2 character
 ### Create produce — POST /produce
 
 ```bash
-curl -i -X POST 'http://localhost:3001/api/produce' -H "Authorization: Bearer $FARMER_TOKEN" -H 'Content-Type: application/json' -d '{"title":"Quickstart carrots","category":"Vegetables","price":90,"unit":"kg","quantity":20,"county":"Nakuru","description":"Fresh carrots available for collection.","availableFrom":"Available now"}'
+curl -i -H 'X-API-Key: <your-api-key>' -X POST 'http://localhost:3001/api/produce' -H "Authorization: Bearer $FARMER_TOKEN" -H 'Content-Type: application/json' -d '{"title":"Quickstart carrots","category":"Vegetables","price":90,"unit":"kg","quantity":20,"county":"Nakuru","description":"Fresh carrots available for collection.","availableFrom":"Available now"}'
 ```
 
 Response: **201 Created**
@@ -395,7 +427,7 @@ Response: **201 Created**
 ### Replace produce fields — PUT /produce/:id
 
 ```bash
-curl -i -X PUT 'http://localhost:3001/api/produce/5' -H "Authorization: Bearer $FARMER_TOKEN" -H 'Content-Type: application/json' -d '{"title":"Quickstart carrots","category":"Vegetables","price":95,"unit":"kg","quantity":20,"county":"Nakuru","description":"Fresh carrots available for collection.","availableFrom":"Available now"}'
+curl -i -H 'X-API-Key: <your-api-key>' -X PUT 'http://localhost:3001/api/produce/5' -H "Authorization: Bearer $FARMER_TOKEN" -H 'Content-Type: application/json' -d '{"title":"Quickstart carrots","category":"Vegetables","price":95,"unit":"kg","quantity":20,"county":"Nakuru","description":"Fresh carrots available for collection.","availableFrom":"Available now"}'
 ```
 
 Response: **200 OK**
@@ -425,7 +457,7 @@ Response: **200 OK**
 ### Delete produce — DELETE /produce/:id
 
 ```bash
-curl -i -X DELETE 'http://localhost:3001/api/produce/5' -H "Authorization: Bearer $FARMER_TOKEN"
+curl -i -H 'X-API-Key: <your-api-key>' -X DELETE 'http://localhost:3001/api/produce/5' -H "Authorization: Bearer $FARMER_TOKEN"
 ```
 
 Response: **204 No Content** — empty body (do not parse as JSON).
@@ -433,7 +465,7 @@ Response: **204 No Content** — empty body (do not parse as JSON).
 ### Create an input or service — POST /products
 
 ```bash
-curl -i -X POST 'http://localhost:3001/api/products' -H "Authorization: Bearer $SUPPLIER_TOKEN" -H 'Content-Type: application/json' -d '{"kind":"input","title":"Quickstart compost","category":"Fertiliser","price":500,"unit":"bag","quantity":10,"county":"Nakuru","description":"Composted organic matter for vegetable gardens."}'
+curl -i -H 'X-API-Key: <your-api-key>' -X POST 'http://localhost:3001/api/products' -H "Authorization: Bearer $SUPPLIER_TOKEN" -H 'Content-Type: application/json' -d '{"kind":"input","title":"Quickstart compost","category":"Fertiliser","price":500,"unit":"bag","quantity":10,"county":"Nakuru","description":"Composted organic matter for vegetable gardens."}'
 ```
 
 Response: **201 Created**
@@ -463,7 +495,7 @@ Response: **201 Created**
 ### Replace product fields — PUT /products/:id
 
 ```bash
-curl -i -X PUT 'http://localhost:3001/api/products/7' -H "Authorization: Bearer $SUPPLIER_TOKEN" -H 'Content-Type: application/json' -d '{"kind":"input","title":"Quickstart compost","category":"Fertiliser","price":550,"unit":"bag","quantity":10,"county":"Nakuru","description":"Composted organic matter for vegetable gardens."}'
+curl -i -H 'X-API-Key: <your-api-key>' -X PUT 'http://localhost:3001/api/products/7' -H "Authorization: Bearer $SUPPLIER_TOKEN" -H 'Content-Type: application/json' -d '{"kind":"input","title":"Quickstart compost","category":"Fertiliser","price":550,"unit":"bag","quantity":10,"county":"Nakuru","description":"Composted organic matter for vegetable gardens."}'
 ```
 
 Response: **200 OK**
@@ -493,7 +525,7 @@ Response: **200 OK**
 ### Delete a product — DELETE /products/:id
 
 ```bash
-curl -i -X DELETE 'http://localhost:3001/api/products/7' -H "Authorization: Bearer $SUPPLIER_TOKEN"
+curl -i -H 'X-API-Key: <your-api-key>' -X DELETE 'http://localhost:3001/api/products/7' -H "Authorization: Bearer $SUPPLIER_TOKEN"
 ```
 
 Response: **204 No Content** — empty body (do not parse as JSON).
@@ -505,7 +537,7 @@ Check the **HTTP status code**: 200/201 indicate success with JSON, and 204 indi
 ### Missing authentication
 
 ```bash
-curl -i 'http://localhost:3001/api/auth/me'
+curl -i -H 'X-API-Key: <your-api-key>' 'http://localhost:3001/api/auth/me'
 ```
 
 Response: **401 Unauthorized**
@@ -519,7 +551,7 @@ Response: **401 Unauthorized**
 ### Invalid registration fields
 
 ```bash
-curl -i -X POST 'http://localhost:3001/api/auth/register' -H 'Content-Type: application/json' -d '{"fullName":"A","email":"bad","phone":"1","county":"N","role":"guest","password":"short"}'
+curl -i -H 'X-API-Key: <your-api-key>' -X POST 'http://localhost:3001/api/auth/register' -H 'Content-Type: application/json' -d '{"fullName":"A","email":"bad","phone":"1","county":"N","role":"guest","password":"short"}'
 ```
 
 Response: **422 Unprocessable Entity**
@@ -543,7 +575,8 @@ Response: **422 Unprocessable Entity**
 | 400 | Missing body, malformed JSON, or a body that is not a JSON object |
 | 413 | Body exceeds 100 KB |
 | 415 | Unsupported content type: `Use Content-Type: application/json.` |
-| 401 | Missing token: `Sign in to continue.`; bad login: `Email or password is incorrect.`; invalid/expired token: `Your session has expired. Please sign in again.` |
+| 429 | Per-key limit exceeded; wait for `Retry-After` |
+| 401 | Missing/invalid API key; missing token: `Sign in to continue.`; bad login: `Email or password is incorrect.`; invalid/expired token: `Your session has expired. Please sign in again.` |
 | 403 | Wrong role or owner: `You can only manage your own listings.`; `Only farmer accounts can post produce listings.`; forbidden order changes |
 | 404 | Missing resource or route: `This API route was not found.`; `This listing no longer exists.` |
 | 409 | Duplicate email: `An account with this email already exists.` with `fields.email` equal to `Try signing in instead.`; invalid status transition; unavailable inventory: `One or more items are no longer available in the requested quantity.` |
@@ -558,6 +591,6 @@ Run `npm test` for isolated API regression checks, `npm run lint` for static che
 
 For API-only hosting on Render Free with a persistent Turso Free database, follow [the deployment guide](docs/DEPLOYMENT.md). The repository includes an API Dockerfile and `render.yaml` Blueprint. Production requires `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and a private `JWT_SECRET`; it never falls back to a disposable local database. Demo accounts are created in production only when `SEED_DEMO_DATA=true` is explicitly set.
 
-See [openapi.yaml](openapi.yaml) for the broader API contract. Entries marked **PROPOSED** (farm location, individual listing detail, and dedicated inventory routes) are not implemented and return 404. This README documents the routes and response shapes currently implemented in [server/index.js](server/index.js).
+See [openapi.yaml](openapi.yaml) for the broader API contract. Farm location, individual listing detail, and dedicated inventory routes are implemented. This README documents the routes and response shapes currently implemented in [server/index.js](server/index.js).
 
 Maintained by Team 6: Abelle Emmanuel, Mukundi Jochebed Mukami, Bruce Ouma, and Mark Kage.

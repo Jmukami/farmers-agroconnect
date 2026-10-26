@@ -16,7 +16,7 @@ test('API validation, atomic stock handling, seller isolation and migration', as
   await new Promise((resolve) => socket.close(resolve));
   let child;
   const start = async () => {
-    child = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, NODE_ENV: 'test', TURSO_DATABASE_URL: '', TURSO_AUTH_TOKEN: '', SEED_DEMO_DATA: 'true', PORT: String(port), DATABASE_PATH: join(directory, 'test.db'), JWT_SECRET: 'isolated-test-secret' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    child = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, NODE_ENV: 'test', API_KEYS: 'isolated-api-test-key', TURSO_DATABASE_URL: '', TURSO_AUTH_TOKEN: '', SEED_DEMO_DATA: 'true', PORT: String(port), DATABASE_PATH: join(directory, 'test.db'), JWT_SECRET: 'isolated-test-secret' }, stdio: ['ignore', 'pipe', 'pipe'] });
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Server startup timed out')), 10000);
       child.once('error', reject);
@@ -26,7 +26,7 @@ test('API validation, atomic stock handling, seller isolation and migration', as
   };
   const stop = () => new Promise((resolve) => { child.once('exit', resolve); child.kill(); });
   const request = async (path, method = 'GET', body, token, raw = false, contentType = 'application/json') => {
-    const response = await fetch(`http://127.0.0.1:${port}/api${path}`, { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'Content-Type': contentType } : {}) }, body: body === undefined ? undefined : raw ? body : JSON.stringify(body) });
+    const response = await fetch(`http://127.0.0.1:${port}/api${path}`, { method, headers: { 'X-API-Key': 'isolated-api-test-key', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'Content-Type': contentType } : {}) }, body: body === undefined ? undefined : raw ? body : JSON.stringify(body) });
     const data = response.status === 204 ? null : await response.json();
     assertContract(path, method, response.status, data);
     return { status: response.status, data };
@@ -43,10 +43,10 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     }
     assert.equal((await request('/auth/me')).status, 401);
     const catalog = (await request('/products')).data.listings;
-    const browserRead = await fetch(`http://127.0.0.1:${port}/api/products`, { headers: { Origin: 'https://campus-hub.example' } });
+    const browserRead = await fetch(`http://127.0.0.1:${port}/api/products`, { headers: { 'X-API-Key': 'isolated-api-test-key', Origin: 'https://campus-hub.example' } });
     assert.equal(browserRead.headers.get('access-control-allow-origin'), '*');
     await browserRead.arrayBuffer();
-    const inventoryRead = await fetch(`http://127.0.0.1:${port}/api/products/1/inventory`);
+    const inventoryRead = await fetch(`http://127.0.0.1:${port}/api/products/1/inventory`, { headers: { 'X-API-Key': 'isolated-api-test-key' } });
     assert.equal(inventoryRead.headers.get('cache-control'), 'no-store');
     await inventoryRead.arrayBuffer();
     const publicProfile = (await request('/farmers/1')).data.farmer;
@@ -146,7 +146,7 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     const migrated = (await orders(buyer)).find((order) => order.id === id);
     assert.equal(migrated.sellers.length, 2);
     assert.ok(migrated.sellers.every((portion) => portion.status === 'fulfilled'));
-    const seedOptions = { baseUrl: `http://127.0.0.1:${port}/api`, password: 'isolated-demo-seed-password' };
+    const seedOptions = { apiKey: 'isolated-api-test-key', baseUrl: `http://127.0.0.1:${port}/api`, password: 'isolated-demo-seed-password' };
     const seeded = await seedDownstream(seedOptions);
     assert.equal(seeded.farmers.length, 2);
     assert.equal(seeded.products.length, 3);
@@ -160,7 +160,7 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     assert.deepEqual(await seedDownstream(seedOptions), seeded);
     assert.equal((await request(`/products/${changed.id}/inventory`)).data.stock, 3);
     assert.equal((await request(`/products/${changed.id}`, 'PUT', { ...changed, title: `DEMO ${changed.title}` }, demoLogin.data.token)).status, 200);
-    assert.deepEqual(await seedDownstream({ ...seedOptions, refreshPresentation: true }), seeded);
+    assert.deepEqual(await seedDownstream({ apiKey: 'isolated-api-test-key', ...seedOptions, refreshPresentation: true }), seeded);
     const refreshed = (await request(`/products/${changed.id}`)).data.listing;
     assert.equal(refreshed.title, changed.title);
     assert.equal(refreshed.stock, 3);

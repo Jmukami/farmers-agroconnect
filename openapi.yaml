@@ -2,8 +2,8 @@ openapi: 3.0.0
 info:
   title: AgroConnect API
   description: >
-    AgroConnect is a full-stack digital agricultural marketplace and service platform connecting Kenyan farmers, farm
-    input/service suppliers, and buyers.
+    AgroConnect is a full-stack digital agricultural marketplace and service platform connecting Kenyan
+    farmers, farm input/service suppliers, and buyers.
 
 
     JSON write requests require an object body and Content-Type application/json.
@@ -12,12 +12,13 @@ info:
 
     and bodies above 100 KB return 413. Numeric fields require JSON numbers.
 
-    AgroConnect timestamps are UTC. SkillBridge availability contains timezone-free wall-clock values; its timezone is
-    unconfirmed. County and category filters are case-sensitive.
+    AgroConnect timestamps are UTC. SkillBridge confirmed that availability date/startTime values use East
+    Africa Time (EAT, UTC+03:00; Africa/Nairobi), shared by both parties. County and category filters are
+    case-sensitive.
 
 
-    This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both internally
-    and our downstream integration partners: **Campus Hub** (Team 7).
+    This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both
+    internally and our downstream integration partners: **Campus Hub** (Team 7).
   version: 1.0.0
   license:
     name: MIT
@@ -53,10 +54,12 @@ paths:
       tags:
         - SkillBridge
       summary: Discover agricultural experts from SkillBridge
-      description: Agricultural experts matched against the Agriculture skill catalogue. Estate and sort/coordinates are
-        forwarded to SkillBridge. Search and agricultural skill matching are local. Results use the requested sort.
+      description: Agricultural experts matched against the Agriculture skill catalogue. Estate and sort/coordinates
+        are forwarded to SkillBridge. Search and agricultural skill matching are local. Results use the
+        requested sort.
       operationId: discoverSkillBridgeExperts
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: skill
           in: query
@@ -132,11 +135,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
         "502":
           description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
           content:
@@ -149,15 +158,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/skillbridge/experts/{id}:
     get:
       tags: [ SkillBridge ]
       summary: View an agricultural expert, reviews and availability
-      description: Agricultural expert with independent review and availability sections. Failed optional sections are null
-        and produce sanitized operational logs. Slot timezone is unconfirmed; consultation submission requires an
-        explicit timestamp.
+      description: Agricultural expert with independent review and availability sections. Failed optional sections
+        are null and produce sanitized operational logs. Slots use East Africa Time (EAT, UTC+03:00), shared
+        by both parties; consultation submission requires an explicit timestamp.
       operationId: getSkillBridgeExpert
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -189,7 +205,7 @@ paths:
                       required: [ date, startTime, durationMinutes ]
                       properties:
                         date: { type: string, format: date }
-                        startTime: { type: string, example: '09:00:00' }
+                        startTime: { type: string, example: '09:00:00', description: "East Africa Time (UTC+03:00), shared by both parties." }
                         durationMinutes: { type: integer, minimum: 1 }
         '400':
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
@@ -212,7 +228,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Partner rate limit, invalid response or unavailable
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
@@ -222,10 +250,11 @@ paths:
       tags:
         - Authentication
       summary: Register a new user account
-      description: Creates a user account with role `farmer`, `buyer`, or `supplier` and returns the user profile with a JWT
-        session token.
+      description: Creates a user account with role `farmer`, `buyer`, or `supplier` and returns the user profile
+        with a JWT session token.
       operationId: registerUser
-      security: []
+      security:
+        - apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -269,15 +298,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/auth/login:
     post:
       tags:
         - Authentication
       summary: Sign in with credentials
-      description: Authenticates user credentials using email and password, returning user profile details and a JWT session token.
+      description: Authenticates user credentials using email and password, returning user profile details and a JWT
+        session token.
       operationId: loginUser
-      security: []
+      security:
+        - apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -292,11 +341,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Unauthorised - invalid email or password
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         "400":
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
@@ -315,6 +364,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/auth/me:
     get:
@@ -325,6 +386,7 @@ paths:
       operationId: getCurrentUser
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       responses:
         '200':
           description: Current user profile
@@ -336,21 +398,34 @@ paths:
                   user:
                     $ref: '#/components/schemas/User'
         '401':
-          description: Unauthorised - missing, expired, or invalid token
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/farmers:
     get:
       tags:
         - Farmers
       summary: List registered farmer profiles
-      description: Retrieves a public directory of all registered farmers, sorted alphabetically by name. Used by downstream
-        consumers for discovery.
+      description: Retrieves a public directory of all registered farmers, sorted alphabetically by name. Used by
+        downstream consumers for discovery.
       operationId: listFarmers
-      security: []
+      security:
+        - apiKeyAuth: []
       responses:
         '200':
           description: List of farmers
@@ -369,6 +444,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/farmers/{id}:
     get:
@@ -379,7 +472,8 @@ paths:
         Retrieves  public profile and contact details for a specific farmer.
         **Downstream Mapping**: Fulfills Campus Hub Need 1 (verify member identities & register memberships).
       operationId: getFarmerById
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -410,16 +504,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/produce:
     get:
       tags:
         - Produce Listings
       summary: Browse and filter produce listings
-      description: Returns a list of active farmer harvest listings, sorted by newest first. Supports optional keyword search,
-        county, and category filtering.
+      description: Returns a list of active farmer harvest listings, sorted by newest first. Supports optional
+        keyword search, county, and category filtering.
       operationId: listProduce
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: search
           in: query
@@ -460,6 +573,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
     post:
       tags:
@@ -469,6 +600,7 @@ paths:
       operationId: createProduce
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -486,11 +618,11 @@ paths:
                   listing:
                     $ref: '#/components/schemas/ProduceListing'
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '403':
           description: Forbidden - only farmer accounts can post produce
           content:
@@ -521,6 +653,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/produce/{id}:
     put:
@@ -531,6 +675,7 @@ paths:
       operationId: updateProduce
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -555,11 +700,11 @@ paths:
                   listing:
                     $ref: '#/components/schemas/ProduceListing'
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '403':
           description: Forbidden - not listing owner
           content:
@@ -590,6 +735,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
     delete:
       tags:
@@ -599,6 +756,7 @@ paths:
       operationId: deleteProduce
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -610,11 +768,11 @@ paths:
         '204':
           description: Produce listing deleted successfully
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '403':
           description: Forbidden - not listing owner
           content:
@@ -633,12 +791,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
     get:
       tags:
         - Produce Listings
       summary: Get produce listing by ID
       operationId: getProduceById
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -670,6 +841,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/products:
     get:
@@ -680,7 +869,8 @@ paths:
         Retrieves a catalog of farm inputs and agricultural services with stock levels.
         **Downstream Mapping**: Fulfills Campus Hub Need 3 (read product information) and Need 4 (access inventory details).
       operationId: listProducts
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: kind
           in: query
@@ -728,16 +918,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
     post:
       tags:
         - Products & Services
       summary: Create a product or service offering
-      description: Publishes a new farm input or agricultural service offering. Restricted to authenticated users with the
-        `supplier` role.
+      description: Publishes a new farm input or agricultural service offering. Restricted to authenticated users
+        with the `supplier` role.
       operationId: createProduct
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -755,11 +964,11 @@ paths:
                   listing:
                     $ref: '#/components/schemas/Product'
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '403':
           description: Forbidden - supplier role required
           content:
@@ -790,6 +999,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/products/{id}:
     put:
@@ -800,6 +1021,7 @@ paths:
       operationId: updateProduct
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -824,11 +1046,11 @@ paths:
                   listing:
                     $ref: '#/components/schemas/Product'
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '403':
           description: Forbidden - not offering owner
           content:
@@ -859,6 +1081,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
     delete:
       tags:
@@ -868,6 +1102,7 @@ paths:
       operationId: deleteProduct
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -879,11 +1114,11 @@ paths:
         '204':
           description: Offering deleted successfully
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '403':
           description: Forbidden - not offering owner
           content:
@@ -902,12 +1137,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
     get:
       tags:
         - Products & Services
       summary: Get product offering by ID
       operationId: getProductById
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -939,6 +1187,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/orders:
     post:
@@ -951,6 +1217,7 @@ paths:
       operationId: createOrder
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -981,11 +1248,11 @@ paths:
                         type: string
                         example: '2026-08-24 17:35:00'
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '409':
           description: Conflict - insufficient inventory for one or more items
           content:
@@ -1016,16 +1283,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
     get:
       tags:
         - Orders
       summary: List user orders
-      description: Buyers receive all items and the full total. Sellers receive only their items, subtotal, and portion
-        status. Both receive a sellers array scoped to their visibility.
+      description: Buyers receive all items and the full total. Sellers receive only their items, subtotal, and
+        portion status. Both receive a sellers array scoped to their visibility.
       operationId: listOrders
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       responses:
         '200':
           description: List of user orders with line items
@@ -1039,11 +1319,23 @@ paths:
                     items:
                       $ref: '#/components/schemas/Order'
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/orders/{id}/status:
     patch:
@@ -1059,6 +1351,7 @@ paths:
       operationId: updateOrderStatus
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1084,11 +1377,11 @@ paths:
                     type: string
                     example: confirmed
         '401':
-          description: Unauthorised
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
         '403':
           description: Forbidden - unauthorized status transition or user
           content:
@@ -1131,6 +1424,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   # ---------------------------------------------------------------------------
   # PROPOSED ENDPOINTS (PLANNED FOR CAMPUS HUB REQUIREMENTS - ENDPOINT_LIST.MD SECTION 2)
@@ -1142,7 +1447,8 @@ paths:
         - Farmers
       summary: Read a farmer-published farm location
       operationId: getFarmerFarmLocation
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1169,17 +1475,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      description: Returns 404 when the farmer does not exist or has not published a farm location. County alone is not a
-        visit address.
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
+      description: Returns 404 when the farmer does not exist or has not published a farm location. County alone is
+        not a visit address.
     put:
       tags:
         - Farmers
       summary: Publish or replace your own farm location
-      description: Farmer owner only. Omitted optional text values become empty strings; omitted farmSizeAcres becomes null.
-        Published location and visit details are publicly readable.
+      description: Farmer owner only. Omitted optional text values become empty strings; omitted farmSizeAcres
+        becomes null. Published location and visit details are publicly readable.
       operationId: publishFarmLocation
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1207,7 +1532,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
-          description: Invalid or unauthorized request
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
@@ -1236,6 +1561,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/products/{id}/detail:
     get:
@@ -1243,7 +1580,8 @@ paths:
         - Products & Services
       summary: Get product offering by ID
       operationId: getProductDetailById
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1275,6 +1613,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/produce/{id}/detail:
     get:
@@ -1282,7 +1638,8 @@ paths:
         - Produce Listings
       summary: Get produce listing by ID
       operationId: getProduceDetailById
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1314,6 +1671,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
 
   /api/products/{id}/inventory:
     get:
@@ -1321,7 +1696,8 @@ paths:
         - Products & Services
       summary: Read current product inventory
       operationId: getProductInventory
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1348,8 +1724,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      description: "Live inventory snapshot with Cache-Control: no-store. Stock is not reserved by this read; order creation
-        may still return 409."
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
+      description: "Live inventory snapshot with Cache-Control: no-store. Stock is not reserved by this read; order
+        creation may still return 409."
   /api/health:
     get:
       tags:
@@ -1377,7 +1771,8 @@ paths:
         - SkillBridge
       summary: Read expert reviews
       operationId: getSkillBridgeReviews
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1410,11 +1805,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Partner rate limit
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
         "502":
           description: Invalid partner response
           content:
@@ -1427,13 +1828,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/skillbridge/experts/{id}/availability:
     get:
       tags:
         - SkillBridge
       summary: Read expert availability
       operationId: getSkillBridgeAvailability
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -1468,11 +1876,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Partner rate limit
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
         "502":
           description: Invalid partner response
           content:
@@ -1485,13 +1899,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/skillbridge/skills:
     get:
       tags:
         - SkillBridge
       summary: Read categorized SkillBridge skills
       operationId: getSkillBridgeSkills
-      security: []
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: tag
           in: query
@@ -1524,11 +1945,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Invalid request or upstream failure
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
         "502":
           description: Invalid request or upstream failure
           content:
@@ -1541,16 +1968,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/skillbridge/requests:
     get:
       tags:
         - SkillBridge
       summary: Read your consultation submission history
-      description: Local records only; partnerStatus is the submission response, not a live status. Submitting or unknown may
-        represent a received booking. No upstream retrieval/cancellation API is available.
+      description: Local records only; partnerStatus is the submission response, not a live status. Submitting or
+        unknown may represent a received booking. No upstream retrieval/cancellation API is available.
       operationId: listConsultations
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       responses:
         "200":
           description: Success
@@ -1566,23 +2000,37 @@ paths:
                     items:
                       $ref: "#/components/schemas/Consultation"
         "401":
-          description: Sign-in required
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
     post:
       tags:
         - SkillBridge
       summary: Submit a consultation request
-      description: Requires a future explicit date-time with seconds and Z or a numeric timezone offset. farmerName comes from
-        the signed-in account. Duplicate user/expert/UTC appointment combinations return 409, including unknown/rejected
-        attempts. No automatic retries. An ambiguous partner outcome is persisted as unknown; contact SkillBridge before
-        trying another appointment. Published availability has an unconfirmed timezone and is not automatically
-        converted or matched.
+      description: Requires a future explicit date-time with seconds and Z or a numeric timezone offset. farmerName
+        comes from the signed-in account. Duplicate user/expert/UTC appointment combinations return 409,
+        including unknown/rejected attempts. No automatic retries. An ambiguous partner outcome is persisted
+        as unknown; contact SkillBridge before trying another appointment. Published availability uses East
+        Africa Time (EAT, UTC+03:00) for both parties. Requested times are normalized to UTC; matching a
+        published slot or guaranteeing reservation is not performed locally.
       operationId: createConsultation
       security:
         - bearerAuth: []
+          apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -1624,22 +2072,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
-          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
-            attempt was stored
+          description: Missing or invalid X-API-Key, or missing/invalid JWT where required.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
-            attempt was stored
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when
+            an attempt was stored
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
-            attempt was stored
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when
+            an attempt was stored
           content:
             application/json:
               schema:
@@ -1657,29 +2104,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "422":
-          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
-            attempt was stored
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when
+            an attempt was stored
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
-            attempt was stored
+          description: 120 requests per key per 60-second window exceeded, or upstream rate limit.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: Seconds until the local key window resets. Present on local limiter responses.
+              schema:
+                type: integer
+                minimum: 1
         "502":
-          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
-            attempt was stored
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when
+            an attempt was stored
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
-          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when an
-            attempt was stored
+          description: Invalid input, duplicate/conflicting request or upstream failure; consultationId is included when
+            an attempt was stored
           content:
             application/json:
               schema:
@@ -1692,6 +2144,12 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Pass standard JWT session token received from `/api/auth/login` or `/api/auth/register`.
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Private consumer key. Required alongside bearerAuth on user-protected operations. 120 requests
+        per key per 60 seconds across all protected endpoints.
 
   schemas:
     SkillBridgeExpert:
@@ -2307,6 +2765,7 @@ components:
         durationMinutes:
           type: integer
           minimum: 1
+      description: Published availability in East Africa Time (EAT, UTC+03:00; Africa/Nairobi), shared by both parties.
     Consultation:
       type: object
       required:

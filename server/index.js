@@ -1,4 +1,5 @@
 import cors from 'cors';
+import { createApiProtection } from './security.js';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -9,9 +10,9 @@ import { createPartnerProviderRouter } from './partner-provider.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
-const jwtSecret = process.env.JWT_SECRET || 'agroconnect-school-project-local-secret';
-if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || jwtSecret === 'agroconnect-school-project-local-secret')) {
-  throw new Error('Set a private JWT_SECRET before starting in production.');
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret || jwtSecret === 'agroconnect-school-project-local-secret') {
+  throw new Error('Set a private JWT_SECRET before starting.');
 }
 
 const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean);
@@ -20,6 +21,7 @@ app.use(cors((req, callback) => {
   const publicRead = ['GET', 'HEAD'].includes(method) && /^\/api\/(?:health|farmers(?:\/[^/]+(?:\/farm-location)?)?|products(?:\/[^/]+(?:\/(?:detail|inventory))?)?|produce(?:\/[^/]+(?:\/detail)?)?)$/.test(req.path);
   callback(null, { origin: publicRead ? '*' : allowedOrigins?.length ? allowedOrigins : process.env.NODE_ENV !== 'production' });
 }));
+app.use('/api', createApiProtection());
 app.use('/api', (req, res, next) => {
   if (!['POST', 'PUT', 'PATCH'].includes(req.method)) return next();
   if (!req.headers['content-type']) return sendError(res, 400, 'Send a JSON request body.');
@@ -382,7 +384,7 @@ app.use((error, _req, res, next) => {
   if (error.type === 'entity.parse.failed') return sendError(res, 400, 'Send valid JSON with an object request body.');
   if (error.type === 'entity.too.large') return sendError(res, 413, 'Request body exceeds the 100 KB limit.');
   if ([409, 422, 403].includes(error.status)) return sendError(res, error.status, error.message);
-  console.error(error);
+  console.error(JSON.stringify({ event: 'api_error', status: 500 }));
   sendError(res, 500, 'Something went wrong on the server. Please try again.');
 });
 

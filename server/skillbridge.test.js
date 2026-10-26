@@ -18,7 +18,7 @@ test('SkillBridge filters agricultural experts and isolates optional upstream fa
     if (url.endsWith('/reviews')) return new Response('unavailable', { status: 503 });
     if (url.endsWith('/availability')) return Response.json([]);
     if (url.includes('/skills')) return Response.json([{ id: 1, name: 'Soil Health', category: 'Agriculture' }]);
-    if (url.endsWith('/experts/13')) return Response.json(expert);
+    if (url.endsWith('/experts/13')) return Response.json({ ...expert, email: 'private@example.invalid', password_hash: 'private', isAdmin: true });
     if (url.endsWith('/experts/99')) return new Response('', { status: 404 });
     return Response.json([{ ...expert, ...(url.includes('proximity') ? { distanceKm: 4.2 } : {}) }, { ...expert, id: 2, skills: ['Music'], distanceKm: 1 }]);
   }, onFailure: () => {} }));
@@ -45,6 +45,7 @@ test('SkillBridge filters agricultural experts and isolates optional upstream fa
     assert.ok(calls.some((url) => url.endsWith('/experts?sort=proximity&estate=Kiambu&lat=0&lng=0')));
     assert.deepEqual((await (await request('/experts?skill=Music')).json()).experts, []);
     const detail = await (await request('/experts/13')).json();
+    assert.deepEqual(detail.expert, expert);
     assert.equal(detail.reviews, null);
     assert.deepEqual(detail.availability, []);
     assert.equal((await request('/experts/invalid')).status, 400);

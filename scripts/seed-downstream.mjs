@@ -5,13 +5,13 @@ import { pathToFileURL } from 'node:url';
 
 // Add demo records through the same authenticated API used by consumers.
 // Existing locations and listings are preserved, including changed stock.
-export async function seedDownstream({ baseUrl, password, refreshPresentation = false }) {
+export async function seedDownstream({ baseUrl, password, refreshPresentation = false, apiKey = process.env.API_KEYS?.split(',')[0]?.trim() }) {
   baseUrl = baseUrl.replace(/\/$/, '');
   if (!password) throw new Error('A demo account password is required.');
   const request = async (path, method = 'GET', body, token) => {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
-      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'X-API-Key': apiKey || '', ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(60000),
     });

@@ -17,6 +17,10 @@ test('OpenAPI parses without duplicate keys and all operation schemas resolve', 
       if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue;
       assert.ok(!operationIds.has(operation.operationId), `Duplicate operationId: ${operation.operationId}`);
       operationIds.add(operation.operationId);
+      if (operation.operationId !== 'healthCheck' && operation.security?.length) {
+        assert.ok(operation.security.every((requirement) => 'apiKeyAuth' in requirement));
+        assert.ok(operation.responses['401'] && operation.responses['429']);
+      }
       const parameters = operation.parameters || [];
       const parameterKeys = parameters.map((parameter) => `${parameter.in}:${parameter.name}`);
       assert.equal(new Set(parameterKeys).size, parameterKeys.length, `Duplicate parameters: ${operation.operationId}`);

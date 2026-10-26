@@ -16,14 +16,14 @@ export default function ConsultationForm({ expert }) {
     setBusy(true);
     setMessage('');
     try {
-      // The farmer explicitly enters EAT; timezone-free availability is never auto-converted.
+      // Both parties use confirmed EAT; serialize the chosen time as a UTC instant.
       const timestamp = new Date(`${date}:00+03:00`).toISOString();
       const { consultation } = await apiRequest('/skillbridge/requests', { method: 'POST', token, body: { expertId: expert.id, topic, date: timestamp } });
       setMessage(`Request #${consultation.requestId} submitted. SkillBridge returned: ${consultation.partnerStatus}. View it under My activity → Consultations.`);
     } catch (error) { setMessage(error.message); }
     finally { inFlight.current = false; setBusy(false); }
   };
-  return <section><h3>Request a consultation</h3><p>Enter your requested appointment in East Africa Time (UTC+03:00). SkillBridge will validate it. This is a request, and does not confirm a reservation.</p>
+  return <section className="consultation-panel"><p className="eyebrow">Arrange a conversation</p><h3>Suggest a preferred time</h3><p>Choose a date and time in East Africa Time (EAT, UTC+03:00). Your request will be sent to SkillBridge for confirmation.</p>
     {!user ? <button className="button button-secondary" onClick={() => setAuthDialog('login')}>Sign in to request advice</button> : <form onSubmit={submit} className="consultation-form">
       <label>What would you like help with?<textarea required minLength={3} maxLength={1000} value={topic} onChange={(e) => setTopic(e.target.value)} /></label>
       <label>Requested date and time (East Africa Time)<input required type="datetime-local" step="60" value={date} onChange={(e) => setDate(e.target.value)} /></label>

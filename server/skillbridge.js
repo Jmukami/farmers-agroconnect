@@ -22,7 +22,15 @@ export function createSkillBridgeClient({ baseUrl = process.env.SKILLBRIDGE_BASE
       let data;
       try { data = await response.json(); } catch { throw fail(502, 'SkillBridge returned an invalid response.'); }
       if (!validate(data)) throw fail(502, 'SkillBridge returned an unexpected response.');
-      return data;
+      // Project validated upstream data so extra fields never reach consumers.
+      const fields = path.startsWith('/experts') && !/\/(reviews|availability)$/.test(path.split('?')[0])
+        ? ['id', 'name', 'estate', 'rating', 'bio', 'latitude', 'longitude', 'skills', 'distanceKm']
+        : path.startsWith('/skills') ? ['id', 'name', 'category']
+          : path.endsWith('/reviews') ? ['rating', 'reviewCount', 'completedSessions']
+            : path.endsWith('/availability') ? ['date', 'startTime', 'durationMinutes']
+              : ['requestId', 'status'];
+      const project = (item) => Object.fromEntries(fields.filter((key) => item[key] !== undefined).map((key) => [key, item[key]]));
+      return Array.isArray(data) ? data.map(project) : project(data);
     } catch (error) {
       const result = error.status ? error : fail(503, 'SkillBridge is temporarily unavailable. Please try again shortly.');
       // Operational events intentionally exclude personal data and request bodies.
@@ -101,7 +109,7 @@ export function createSkillBridgeRouter(options = {}) {
   });
   router.use((error, _req, res, _next) => {
     void _next;
-    res.status(error.status || 502).json({ message: error.message || 'SkillBridge is unavailable.' });
+    res.status(error.status || 502).json({ message: error.status ? error.message : 'SkillBridge is unavailable.' });
   });
   return router;
 }

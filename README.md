@@ -1,5 +1,7 @@
 # AgroConnect API
 
+![AgroConnect produce marketplace](public/assets/images/Screenshot.png)
+
 Expert advice integrates SkillBridge's agricultural directory, estate/proximity filtering, profiles, reviews, availability and consultation submission/history. See [SkillBridge integration](docs/SKILLBRIDGE.md), the [downstream guide](docs/DOWNSTREAM_INTEGRATION.md), and the [integration log](INTEGRATION_LOG.MD).
 
 AgroConnect is a REST API for an agricultural marketplace in Kenya. It lets farmers publish produce, suppliers advertise farm inputs and services, and buyers discover sellers and place orders. It is intended for frontend developers and integration partners building farmer directories, catalogues, and purchasing workflows.

@@ -28,8 +28,6 @@ We read the success and error responses from the marketplace, farm-location, ord
 - **Secret handling:** Removed the default JWT signing secret. A private `JWT_SECRET` is required in every environment. API keys are compared as fixed-size hashes and are not logged. Keyed responses use `Cache-Control: no-store`. The local Vite proxy attaches the key server-side, and Render configuration requests it privately.
 - **Documentation and verification:** Updated README examples with `<your-api-key>`, the required header, and 401/429 responses. OpenAPI declares API key security together with JWT security where required. All eight tests passed, along with lint and the frontend build. Checks cover ownership, transactions, consultation persistence, response fields, key rejection, separate key allowances, cross-route counting, window reset and exemptions.
 
-Still open: the signing secret found in history must be treated as exposed. The deployment owner needs to rotate it wherever it was used and invalidate old sessions. We did not rotate hosted credentials, rewrite Git history or deploy these changes. A production browser frontend also needs an access-controlled server proxy; the shared key must not be placed in a `VITE_` variable or browser bundle.
-
 ## Our rate limit and why we chose it
 
 We allow **120 requests per API key per 60-second fixed window**, shared across all protected routes. This covers the product catalogue and inventory reads we expect to be called most often, as well as more expensive SkillBridge calls.

@@ -4,7 +4,15 @@ Expert advice consumes SkillBridge through Express, independently of the marketp
 
 ## Configuration
 
-`SKILLBRIDGE_BASE_URL` defaults to `https://skillbridge-api-p6s9.onrender.com/api`. Include `/api`, without `/health`. Supply overrides through the backend process environment or hosting dashboard; `.env` files are not loaded automatically. Public upstream GETs currently require no credentials. AgroConnect JWTs are never forwarded.
+`SKILLBRIDGE_BASE_URL` defaults to `https://skillbridge-api-p6s9.onrender.com/api`. Include `/api`, without `/health`. SkillBridge now requires its issued key in `X-API-Key`. Configure `SKILLBRIDGE_API_KEY` in the Express backend environment; the shared adapter sends it on all upstream GET and POST requests. AgroConnect JWTs and incoming consumer keys are never forwarded.
+
+`API_KEYS` controls access **to AgroConnect**; `SKILLBRIDGE_API_KEY` authenticates **AgroConnect to SkillBridge**. They are separate credentials. Never use a `VITE_` prefix for the partner key or add it to frontend code, URLs, logs or source control. Existing consumer authentication and API response schemas remain unchanged.
+
+For local development, copy `server/.env.example` to Git-ignored `server/.env`, fill in the backend settings privately, then run `node --env-file=server/.env server/index.js` (Node 22). Plain `npm start` does not load environment files automatically. Setting the key only in the root Vite `.env.local` does not configure Express. If Vite proxies to the hosted API, configure the key on the hosted backend instead.
+
+On Render, add `SKILLBRIDGE_API_KEY` under the existing service's Environment settings and deploy the updated backend. The Blueprint declares it as a secret supplied outside Git. Restart/redeploy after setting or rotating the key. Missing credentials return 503 without making an upstream request; upstream 401/403 are reported as a sanitized integration-credential failure (503), rather than asking the farmer to sign in again. Other marketplace functionality remains available.
+
+After configuration, verify expert discovery and a profile read through AgroConnect using your existing consumer `X-API-Key`. No live consultation is needed to verify authentication. Do not use the older log-appending check script when preserving historical snapshots is required.
 
 ## Routes
 

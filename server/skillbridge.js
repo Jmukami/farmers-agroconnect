@@ -7,14 +7,16 @@ const listOf = (check) => (value) => Array.isArray(value) && value.every(check);
 const validReviews = (x) => x && Number.isFinite(x.rating) && ['reviewCount', 'completedSessions'].every((k) => Number.isInteger(x[k]) && x[k] >= 0);
 const validSlots = listOf((x) => x && typeof x.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && typeof x.startTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(x.startTime) && Number.isInteger(x.durationMinutes) && x.durationMinutes > 0);
 
-export function createSkillBridgeClient({ baseUrl = process.env.SKILLBRIDGE_BASE_URL || 'https://skillbridge-api-p6s9.onrender.com/api', fetchImpl = fetch, timeoutMs = 12000, onFailure = (event) => console.error(JSON.stringify(event)) } = {}) {
+export function createSkillBridgeClient({ baseUrl = process.env.SKILLBRIDGE_BASE_URL || 'https://skillbridge-api-p6s9.onrender.com/api', apiKey = process.env.SKILLBRIDGE_API_KEY, fetchImpl = fetch, timeoutMs = 12000, onFailure = (event) => console.error(JSON.stringify(event)) } = {}) {
   return async (path, validate, { method = 'GET', body } = {}) => {
     const started = Date.now();
     let upstreamStatus;
     try {
-      const response = await fetchImpl(`${baseUrl.replace(/\/+$/, '')}${path}`, { method, headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(timeoutMs), redirect: 'error' });
+      if (!apiKey?.trim()) throw fail(503, 'SkillBridge integration credentials are not configured. Contact the AgroConnect team.');
+      const response = await fetchImpl(`${baseUrl.replace(/\/+$/, '')}${path}`, { method, headers: { Accept: 'application/json', 'X-API-Key': apiKey.trim(), ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(timeoutMs), redirect: 'error' });
       upstreamStatus = response.status;
       if (!response.ok) {
+        if ([401, 403].includes(response.status)) throw fail(503, 'SkillBridge integration credentials were rejected. Contact the AgroConnect team.');
         const status = [400, 404, 409, 422, 429].includes(response.status) ? response.status : 503;
         const messages = { 400: 'SkillBridge rejected the request.', 404: 'This SkillBridge resource could not be found.', 409: 'The consultation slot is no longer available.', 422: 'SkillBridge could not validate the consultation.', 429: 'SkillBridge is busy. Please try again later.' };
         throw fail(status, messages[status] || 'SkillBridge is temporarily unavailable. Please try again shortly.');

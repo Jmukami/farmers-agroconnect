@@ -11,7 +11,7 @@ test('SkillBridge filters agricultural experts and isolates optional upstream fa
   let offline = false;
   const calls = [];
   const app = express();
-  app.use('/api/skillbridge', createSkillBridgeRouter({ fetchImpl: async (url) => {
+  app.use('/api/skillbridge', createSkillBridgeRouter({ apiKey: 'test-upstream-key', fetchImpl: async (url) => {
     calls.push(url);
     if (offline) throw new Error('connection failed');
     if (malformed) return Response.json({ invalid: true });
@@ -61,13 +61,37 @@ test('SkillBridge filters agricultural experts and isolates optional upstream fa
 test('SkillBridge client reports sanitized failures, preserves conflicts and does not retry writes', async () => {
   const events = [];
   let calls = 0;
-  const client = createSkillBridgeClient({ onFailure: (event) => events.push(event), fetchImpl: async () => { calls++; return new Response('', { status: 409 }); } });
+  const client = createSkillBridgeClient({ apiKey: 'test-upstream-key', onFailure: (event) => events.push(event), fetchImpl: async () => { calls++; return new Response('', { status: 409 }); } });
   await assert.rejects(client('/requests', () => true, { method: 'POST', body: { farmerName: 'Private name' } }), { status: 409 });
   assert.equal(calls, 1);
   assert.equal(events[0].upstreamStatus, 409);
   assert.ok(!JSON.stringify(events).includes('Private name'));
-  const invalidJson = createSkillBridgeClient({ onFailure: () => {}, fetchImpl: async () => new Response('invalid') });
+  const invalidJson = createSkillBridgeClient({ apiKey: 'test-upstream-key', onFailure: () => {}, fetchImpl: async () => new Response('invalid') });
   await assert.rejects(invalidJson('/skills', () => true), { status: 502 });
-  const timeout = createSkillBridgeClient({ timeoutMs: 5, onFailure: () => {}, fetchImpl: (_url, { signal }) => new Promise((_resolve, reject) => { signal.addEventListener('abort', () => reject(signal.reason)); setTimeout(() => reject(new Error('Test fallback')), 30); }) });
+  const timeout = createSkillBridgeClient({ apiKey: 'test-upstream-key', timeoutMs: 5, onFailure: () => {}, fetchImpl: (_url, { signal }) => new Promise((_resolve, reject) => { signal.addEventListener('abort', () => reject(signal.reason)); setTimeout(() => reject(new Error('Test fallback')), 30); }) });
   await assert.rejects(timeout('/experts', () => true), { status: 503 });
+});
+
+test('SkillBridge credentials stay in upstream headers and failures are sanitized', async () => {
+  const secret = 'private-partner-test-key';
+  const events = [];
+  for (const status of [200, 401, 403]) {
+    let calls = 0;
+    const client = createSkillBridgeClient({ apiKey: secret, onFailure: (event) => events.push(event), fetchImpl: async (url, options) => {
+      calls++;
+      assert.equal(options.headers['X-API-Key'], secret);
+      assert.equal(options.headers.Authorization, undefined);
+      assert.equal(options.redirect, 'error');
+      assert.ok(!url.includes(secret));
+      return Response.json(status === 200 ? [] : { message: secret }, { status });
+    } });
+    if (status === 200) assert.deepEqual(await client('/skills', Array.isArray), []);
+    else await assert.rejects(client('/skills', Array.isArray), (error) => error.status === 503 && !error.message.includes(secret));
+    assert.equal(calls, 1);
+  }
+  let calls = 0;
+  const missing = createSkillBridgeClient({ apiKey: '', onFailure: (event) => events.push(event), fetchImpl: async () => { calls++; } });
+  await assert.rejects(missing('/skills', Array.isArray), { status: 503 });
+  assert.equal(calls, 0);
+  assert.ok(!JSON.stringify(events).includes(secret));
 });

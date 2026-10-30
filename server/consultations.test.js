@@ -13,9 +13,11 @@ test('consultations persist success and ambiguous outcomes, isolate users and pr
   let outcome = 'success';
   const app = express();
   app.use(express.json());
-  app.use('/requests', createConsultationRouter({ db,
+  app.use('/requests', createConsultationRouter({ db, apiKey: 'test-upstream-key',
     authenticate: (req, res, next) => { if (!req.headers.authorization) return res.sendStatus(401); req.user = { id: Number(req.headers.authorization), fullName: 'Authenticated Farmer' }; next(); },
     onFailure: () => {}, fetchImpl: async (url, options) => {
+      assert.equal(options.headers['X-API-Key'], 'test-upstream-key');
+      assert.equal(options.headers.Authorization, undefined);
       if (url.includes('/experts/')) return Response.json({ id: 13, name: 'Agronomist', skills: ['Soil Health'] });
       if (url.includes('/skills')) return Response.json([{ name: 'Soil Health', category: 'Agriculture' }]);
       writes++;

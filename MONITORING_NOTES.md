@@ -1,6 +1,6 @@
 # Monitoring hypotheses for AgroConnect endpoints
 
-These are educated guesses from our own API route implementations, excluding the `/api/skillbridge/*` integration routes. They are not measured rankings; revisit them after collecting production samples.
+These are educated guesses from our own API route implementations, excluding the `/api/skillbridge/*` integration routes. They are not measured rankings; we will revisit them after collecting production samples.
 
 ## Likely slowest: `POST /api/orders`
 

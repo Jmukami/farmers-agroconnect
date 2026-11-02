@@ -51,6 +51,39 @@ Content-Type: application/json
 
 The next window restores the allowance. Restarting clears counters; multiple processes have independent counters. Use a shared limiter before scaling horizontally. Keyed requests that later fail validation or JWT authentication still count.
 
+### Monitoring statistics — `GET /api/stats`
+
+Returns in-memory request counts and timing summaries by route since this server process started. This endpoint requires the `X-API-Key` header:
+
+```bash
+curl -i 'http://localhost:3001/api/stats' -H 'X-API-Key: <your-api-key>'
+```
+
+Example response:
+
+```json
+{
+  "startedAt": "2026-11-02T14:00:00.000Z",
+  "uptimeSeconds": 600,
+  "total": 24,
+  "clientErrors": 2,
+  "serverErrors": 0,
+  "errorRatePercent": 0,
+  "avgMs": 3.1,
+  "routes": {
+    "GET /api/products": {
+      "count": 8,
+      "clientErrors": 0,
+      "serverErrors": 0,
+      "avgMs": 4.2,
+      "maxMs": 8.7
+    }
+  }
+}
+```
+
+Counters reset when the server process restarts. `errorRatePercent` reports 5xx responses; 4xx responses are listed separately in `clientErrors`.
+
 For local browser development, run API and Vite with the same `API_KEYS` environment and leave `VITE_API_BASE_URL` unset or `/api`. Vite attaches the first configured key on its server-side proxy. Never create a `VITE_` API-key variable. A deployed browser UI needs a server-side proxy with its own access controls; the API-only deployment does not supply one.
 
 ## 1. Run locally from a clean clone

@@ -14,7 +14,7 @@ export default function ExpertAvailability({ slots }) {
     groups.get(slot.date).push(slot);
   }
   return <section className="availability-panel" aria-label="Published availability">
-    <div className="availability-heading"><div><p className="eyebrow">SkillBridge schedule</p><h3>Published availability</h3></div><span className="timezone-badge">East Africa Time ? UTC+03:00</span></div>
+    <div className="availability-heading"><div><h3>Published availability</h3></div><span className="timezone-badge">UTC+03:00</span></div>
     <p className="availability-note">All times are in East Africa Time (EAT), shared by you and the expert. Suggest your preferred appointment below.</p>
     {slots === null ? <p role="status">The schedule could not be loaded. You can refresh it or suggest a preferred time below.</p> : !slots.length ? <p>No published times at the moment. You can still suggest a preferred time below.</p> : <div className="availability-days">{[...groups].map(([date, entries]) => <article className="availability-day" key={date}>
       <h4><time dateTime={date}>{dateLabel(date)}</time></h4>

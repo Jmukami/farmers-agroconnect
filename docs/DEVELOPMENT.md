@@ -92,7 +92,23 @@ rm -f server/data/agroconnect.db
 The database will be freshly recreated and re-seeded on the next server start (`npm run dev` or `npm run dev:server`).
 
 ### Seed Accounts Reference
+These four credentials belong to a freshly seeded **local SQLite database**, not the hosted Render database. Seeding runs only when the users table is empty; it does not add missing demo accounts to an existing database. All four login attempts against Render returned 401 (incorrect email/password) on 30 October 2026. Using the local frontend with the Render proxy still authenticates against Render.
+
 - **Farmer**: `grace@agroconnect.local` | Password: `agroconnect`
 - **Farmer 2**: `peter@agroconnect.local` | Password: `agroconnect`
 - **Supplier (Inputs)**: `rift@agroconnect.local` | Password: `agroconnect`
 - **Supplier (Services)**: `vetcare@agroconnect.local` | Password: `agroconnect`
+
+### Verified hosted presentation accounts
+
+The following accounts successfully authenticated against Render on 30 October 2026:
+
+| Account | Name | Role |
+| --- | --- | --- |
+| `nakuru-farmer@downstream-demo.invalid` | Daniel Kamau | farmer |
+| `kisumu-farmer@downstream-demo.invalid` | Akinyi Ouma | farmer |
+| `supplier@downstream-demo.invalid` | Mavuno Farm Supplies | supplier |
+
+These three accounts use the generated password stored in the root Git-ignored `.downstream-seed-eb009dca5900.local` file (`password` property), **not** `agroconnect`. Keep that file private. Existing personal account credentials are separate. The accounts and their sample data are for presentation/integration use.
+
+Consultation history is owned by the signed-in account. Logging into a different farmer will not show another account's requests. The history is saved by AgroConnect when submitting to SkillBridge; its partner status is the original response, not a live synchronization of pending bookings.

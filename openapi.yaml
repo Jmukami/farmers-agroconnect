@@ -109,6 +109,8 @@ paths:
                   - experts
                   - skills
                   - estates
+                  - stale
+                  - asOf
                 properties:
                   experts:
                     type: array
@@ -122,6 +124,8 @@ paths:
                     type: array
                     items:
                       type: string
+                  stale: { type: boolean, description: True when cached partner data is being returned. }
+                  asOf: { type: string, format: date-time, description: Time the returned partner data was saved. }
         "400":
           description: Invalid request, missing upstream resource, partner limit, invalid response or partner unavailable
           content:
@@ -186,9 +190,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [ expert, reviews, availability ]
+                required: [ expert, reviews, availability, stale, asOf ]
                 properties:
                   expert: { $ref: '#/components/schemas/SkillBridgeExpert' }
+                  stale: { type: boolean, description: True when cached partner data is being returned. }
+                  asOf: { type: string, format: date-time, description: Time the returned partner data was saved. }
                   reviews:
                     type: object
                     nullable: true
@@ -1438,7 +1444,7 @@ paths:
                 minimum: 1
 
   # ---------------------------------------------------------------------------
-  # PROPOSED ENDPOINTS (PLANNED FOR CAMPUS HUB REQUIREMENTS - ENDPOINT_LIST.MD SECTION 2)
+  # IMPLEMENTED CAMPUS HUB PROVIDER ENDPOINTS (server/partner-provider.js)
   # ---------------------------------------------------------------------------
 
   /api/farmers/{id}/farm-location:
@@ -1789,9 +1795,13 @@ paths:
                 type: object
                 required:
                   - reviews
+                  - stale
+                  - asOf
                 properties:
                   reviews:
                     $ref: "#/components/schemas/SkillBridgeReviews"
+                  stale: { type: boolean, description: True when cached partner data is being returned. }
+                  asOf: { type: string, format: date-time, description: Time the returned partner data was saved. }
         "400":
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
@@ -1858,11 +1868,15 @@ paths:
                 type: object
                 required:
                   - availability
+                  - stale
+                  - asOf
                 properties:
                   availability:
                     type: array
                     items:
                       $ref: "#/components/schemas/SkillBridgeSlot"
+                  stale: { type: boolean, description: True when cached partner data is being returned. }
+                  asOf: { type: string, format: date-time, description: Time the returned partner data was saved. }
         "400":
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
@@ -1927,11 +1941,15 @@ paths:
                 type: object
                 required:
                   - skills
+                  - stale
+                  - asOf
                 properties:
                   skills:
                     type: array
                     items:
                       $ref: "#/components/schemas/SkillBridgeSkill"
+                  stale: { type: boolean, description: True when cached partner data is being returned. }
+                  asOf: { type: string, format: date-time, description: Time the returned partner data was saved. }
         "400":
           description: Invalid request or upstream failure
           content:

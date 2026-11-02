@@ -52,6 +52,7 @@ h1, h2, h3 { color: #16231b; }
 .button-full { width: 100%; margin-top: 7px; }
 .text-button { border: 0; color: #1d6847; background: transparent; padding: 4px 0; font-size: 14px; font-weight: 750; display: inline-flex; align-items: center; gap: 4px; text-align: left; }
 .text-button:hover { color: #103c29; text-decoration: underline; text-underline-offset: 3px; }
+.text-button-close { border: 0; color: #ec4123; background: transparent; padding: 4px 0; font-size: 14px; font-weight: 750; display: inline-flex; align-items: center; gap: 4px; text-align: right; }
 
 .filter-bar { display: grid; grid-template-columns: minmax(200px, 2fr) minmax(150px, 1fr) minmax(150px, 1fr); gap: 10px; margin-bottom: 26px; }
 .filter-bar label { display: block; }
@@ -214,7 +215,7 @@ h1, h2, h3 { color: #16231b; }
 .expert-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .expert-card-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .expert-avatar { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 17px; background: #eaf3e7; border: 1px solid #d6e6cf; color: #306044; font-size: 21px; font-weight: 750; letter-spacing: .03em; }
-.expert-rating { padding: 7px 10px; background: #fff8e7; color: #6c5010; border: 1px solid #f0e3bb; border-radius: 20px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.expert-rating { padding: 7px 10px; background: #fff8e7; color: #6c5010; border-radius: 20px; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .expert-rating-scale { font-weight: 400; }
 .expert-card-identity h2 { font-size: 23px; letter-spacing: -.025em; line-height: 1.25; }
 .expert-card .expert-place { margin-top: 6px; font-size: 13px; color: #65766b; }
@@ -246,3 +247,57 @@ h1, h2, h3 { color: #16231b; }
 .availability-day li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: #f5f8f3; border-radius: 5px; }
 .availability-day li span, .availability-footnote { font-size: 12px; }
 .consultation-panel { padding-top: 6px; }
+.consultation-history-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; margin: 24px 0; }
+.consultation-history-heading h2 { margin: 5px 0 8px; font-size: 24px; }
+.consultation-history-heading p { margin: 0; color: #627569; }
+.consultation-card { display: flex; gap: 22px; padding: 24px; border: 1px solid #dbe5dc; border-radius: 12px; background: #fff; box-shadow: 0 4px 18px #1b543907; }
+.consultation-date { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 76px; min-width: 76px; height: 96px; background: #eef5e9;  border-radius: 10px; color: #356044; }
+.consultation-date span { font-size: 12px; }
+.consultation-date span:first-child { text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.consultation-date strong { font-size: 31px; line-height: 1.1; }
+.consultation-content { flex: 1; min-width: 0; }
+.consultation-card-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.consultation-card-heading .eyebrow { margin: 0 0 6px; font-size: 10px; }
+.consultation-card h3 { margin: 0; font-size: 21px; letter-spacing: -.02em; }
+.consultation-topic { color: #405848; line-height: 1.6; margin: 14px 0 10px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.consultation-time { color: #345740; font-size: 13px; font-weight: 650; }
+.consultation-status { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px;  border-radius: 20px; font-size: 12px; font-weight: 650; max-width: 100%; overflow-wrap: anywhere; }
+.consultation-status > span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.consultation-status-pending { color: #775b17; background: #fff8e6; border-color: #eedfaf; }
+.consultation-status-positive { color: #276145; background: #edf7ef; border-color: #c9dfce; }
+.consultation-status-uncertain { color: #795b27; background: #fff5df; border-color: #e6d2a9; }
+.consultation-status-rejected { color: #8b453b; background: #fff2ee; border-color: #e6c8c1; }
+.consultation-status-neutral { color: #50655a; background: #f2f6f1; border-color: #d7e1d5; }
+.consultation-hint, .consultation-history-note { color: #6a7b6e; font-size: 12px; line-height: 1.6; }
+.consultation-notice { padding: 12px; border-radius: 6px; background: #fff7e4; color: #735723; font-size: 13px; line-height: 1.5; }
+.consultation-reference { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 13px; margin-top: 16px; border-top: 1px solid #e8eee6; color: #77877c; font-size: 11px; }
+.consultation-history-note { margin-top: 20px; max-width: 780px; }
+.consultation-error { padding: 20px; border: 1px solid #e6c8c1; border-radius: 8px; background: #fff8f5; }
+.skillbridge-skeleton { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 24px; min-height: 325px; border: 1px solid #dce8d8; border-radius: 14px; background: #f9fcf7; }
+.skillbridge-skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 20%, #e4f1e375 40%, #fafff9c9 50%, #e4f1e375 60%, transparent 80%); transform: translateX(-100%); animation: skillbridge-shimmer 1.8s ease-in-out infinite; pointer-events: none; }
+.skillbridge-skeleton .skeleton-line, .skeleton-avatar, .skeleton-chips span, .skeleton-schedule span { display: block; background: #e3edde; border-radius: 5px; }
+.skillbridge-skeleton .skeleton-line { height: 12px; width: 100%; }
+.skillbridge-skeleton .skeleton-line-title { width: 75%; height: 20px; margin-bottom: 12px; }
+.skillbridge-skeleton .skeleton-line-short { width: 55%; }
+.skillbridge-skeleton .skeleton-line-action { margin-top: auto; height: 38px; width: 42%; }
+.skeleton-identity { display: flex; align-items: center; gap: 16px; margin-bottom: 6px; }
+.skeleton-identity > div { flex: 1; }
+.skeleton-avatar { width: 58px; height: 58px; border-radius: 17px; }
+.skeleton-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.skeleton-chips span { height: 26px; width: 85px; border-radius: 20px; }
+.skeleton-schedule { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-block: 16px; }
+.skeleton-schedule span { height: 160px; }
+.skillbridge-skeleton-profile { min-height: 470px; margin-top: 24px; }
+.skillbridge-skeleton-consultation { min-height: 210px; }
+.skillbridge-stale-notice { padding: 12px 16px; border: 1px solid #e8d7a9; border-radius: 8px; background: #fff8e7; color: #6d5724; font-size: 13px; line-height: 1.5; }
+@keyframes skillbridge-shimmer { to { transform: translateX(100%); } }
+@media (max-width: 620px) {
+  .consultation-card { padding: 18px; gap: 14px; }
+  .consultation-date { min-width: 55px; width: 55px; height: 82px; }
+  .consultation-date strong { font-size: 26px; }
+  .consultation-card h3 { font-size: 18px; }
+  .consultation-status { font-size: 11px; }
+  .skeleton-schedule { grid-template-columns: 1fr; }
+  .skeleton-schedule span { height: 65px; }
+}
+@media (prefers-reduced-motion: reduce) { .skillbridge-skeleton::after { animation: none; display: none; } }

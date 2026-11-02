@@ -51,10 +51,14 @@ test('SkillBridge filters agricultural experts and isolates optional upstream fa
     assert.equal((await request('/experts/invalid')).status, 400);
     assert.equal((await request('/experts/99')).status, 404);
     malformed = true;
-    assert.equal((await request('/experts')).status, 502);
+    const malformedSaved = await request('/experts');
+    assert.equal(malformedSaved.status, 200);
+    assert.equal((await malformedSaved.json()).stale, true);
     malformed = false;
     offline = true;
-    assert.equal((await request('/experts')).status, 503);
+    const saved = await request('/experts');
+    assert.equal(saved.status, 200);
+    assert.equal((await saved.json()).stale, true);
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });
 

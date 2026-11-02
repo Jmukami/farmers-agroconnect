@@ -1,5 +1,6 @@
 import cors from 'cors';
 import { createApiProtection } from './security.js';
+import { monitor, statsHandler } from './monitoring.js';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -21,6 +22,10 @@ app.use(cors((req, callback) => {
   const publicRead = ['GET', 'HEAD'].includes(method) && /^\/api\/(?:health|farmers(?:\/[^/]+(?:\/farm-location)?)?|products(?:\/[^/]+(?:\/(?:detail|inventory))?)?|produce(?:\/[^/]+(?:\/detail)?)?)$/.test(req.path);
   callback(null, { origin: publicRead ? '*' : allowedOrigins?.length ? allowedOrigins : process.env.NODE_ENV !== 'production' });
 }));
+app.use('/api', (req, res, next) => {
+  if (req.path === '/skillbridge' || req.path.startsWith('/skillbridge/')) return next();
+  return monitor(req, res, next);
+});
 app.use('/api', createApiProtection());
 app.use('/api', (req, res, next) => {
   if (!['POST', 'PUT', 'PATCH'].includes(req.method)) return next();
@@ -132,6 +137,7 @@ async function ownerOrNotFound(req, res, table, id) {
   return listing;
 }
 
+app.get('/api/stats', statsHandler);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/skillbridge', createSkillBridgeRouter());
 app.use('/api/skillbridge/requests', createConsultationRouter({ db, authenticate }));
@@ -388,4 +394,9 @@ app.use((error, _req, res, next) => {
   sendError(res, 500, 'Something went wrong on the server. Please try again.');
 });
 
-app.listen(port, () => console.log(`AgroConnect API is running at http://localhost:${port}/api`));
+const server = app.listen(port);
+server.on('error', (error) => {
+  console.error(`AgroConnect API could not start on port ${port}: ${error.message}`);
+  process.exitCode = 1;
+});
+server.on('listening', () => console.log(`AgroConnect API is running at http://localhost:${port}/api`));

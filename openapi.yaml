@@ -19,6 +19,12 @@ info:
 
     This OpenAPI specification defines the REST API contract for the AgroConnect platform, serving both
     internally and our downstream integration partners: **Campus Hub** (Team 7).
+
+
+    Campus Hub product catalogue reads have a parallel v2 contract at /api/v2/products. The existing
+    /api/products reads remain available during the proposed migration window and send Deprecation,
+    Sunset, and successor-version Link headers. The proposed sunset date is 2026-11-26 and is not yet
+    agreed with Campus Hub. Product write routes remain unchanged in this rollout.
   version: 1.0.0
   license:
     name: MIT
@@ -42,6 +48,8 @@ tags:
     description: Farmer-owned agricultural harvest produce marketplace
   - name: Products & Services
     description: Farm inputs, equipment, and agricultural service catalog (Downstream for Campus Hub Need 3 & 4)
+  - name: Products API v2
+    description: Versioned Campus Hub product catalogue, detail, and inventory reads
   - name: Orders
     description: Multi-item purchasing, transactional checkout, and order status workflow
   - name: SkillBridge
@@ -874,7 +882,11 @@ paths:
       description: |
         Retrieves a catalog of farm inputs and agricultural services with stock levels.
         **Downstream Mapping**: Fulfills Campus Hub Need 3 (read product information) and Need 4 (access inventory details).
+        This legacy read remains available while Campus Hub migrates to `/api/v2/products`. Its responses include
+        `Deprecation: true`, `Sunset: Wed, 18 Nov 2026 00:00:00 GMT`, and a `Link` header for the successor route.
+        The date is proposed and must be agreed with Campus Hub. Product write operations are unchanged.
       operationId: listProducts
+      deprecated: true
       security:
         - apiKeyAuth: []
       parameters:
@@ -908,7 +920,7 @@ paths:
             example: Seeds
       responses:
         '200':
-          description: Array of product and service listings
+          description: Legacy product collection. Deprecated; migrate to GET /api/v2/products before the proposed sunset.
           content:
             application/json:
               schema:
@@ -918,6 +930,22 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+          headers:
+            Deprecation:
+              description: Indicates this legacy product read is deprecated.
+              schema:
+                type: string
+                example: 'true'
+            Sunset:
+              description: Proposed date for ending the legacy product read; pending Campus Hub agreement.
+              schema:
+                type: string
+                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+            Link:
+              description: Successor-version link to the versioned product collection.
+              schema:
+                type: string
+                example: '</api/v2/products>; rel="successor-version"'
         '400':
           description: Invalid query parameters
           content:
@@ -1158,8 +1186,10 @@ paths:
     get:
       tags:
         - Products & Services
-      summary: Get product offering by ID
+      summary: Get product offering by ID (legacy v1)
+      description: Deprecated Campus Hub read. Responses include Deprecation, Sunset, and a successor-version Link header; use GET /api/v2/products/{id}.
       operationId: getProductById
+      deprecated: true
       security:
         - apiKeyAuth: []
       parameters:
@@ -1181,6 +1211,22 @@ paths:
                 properties:
                   listing:
                     $ref: "#/components/schemas/Product"
+          headers:
+            Deprecation:
+              description: Indicates this legacy product read is deprecated.
+              schema:
+                type: string
+                example: 'true'
+            Sunset:
+              description: Proposed sunset date pending Campus Hub agreement.
+              schema:
+                type: string
+                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+            Link:
+              description: Successor-version link to the v2 product detail route.
+              schema:
+                type: string
+                example: '</api/v2/products/1>; rel="successor-version"'
         "400":
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
@@ -1584,8 +1630,10 @@ paths:
     get:
       tags:
         - Products & Services
-      summary: Get product offering by ID
+      summary: Get product offering by ID (legacy v1 alias)
+      description: Deprecated compatibility alias. Migrate to GET /api/v2/products/{id}; Link points to that canonical v2 route.
       operationId: getProductDetailById
+      deprecated: true
       security:
         - apiKeyAuth: []
       parameters:
@@ -1607,6 +1655,22 @@ paths:
                 properties:
                   product:
                     $ref: "#/components/schemas/Product"
+          headers:
+            Deprecation:
+              description: Indicates this legacy product read is deprecated.
+              schema:
+                type: string
+                example: 'true'
+            Sunset:
+              description: Proposed sunset date pending Campus Hub agreement.
+              schema:
+                type: string
+                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+            Link:
+              description: Successor-version link to the canonical v2 product detail route.
+              schema:
+                type: string
+                example: '</api/v2/products/1>; rel="successor-version"'
         "400":
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
@@ -1700,8 +1764,10 @@ paths:
     get:
       tags:
         - Products & Services
-      summary: Read current product inventory
+      summary: Read current product inventory (legacy v1)
+      description: Deprecated Campus Hub read. Migrate to GET /api/v2/products/{id}/inventory; responses include Deprecation, Sunset, and successor-version Link headers. Inventory responses use no-store cache control and do not reserve stock.
       operationId: getProductInventory
+      deprecated: true
       security:
         - apiKeyAuth: []
       parameters:
@@ -1718,6 +1784,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InventoryStatus"
+          headers:
+            Deprecation:
+              description: Indicates this legacy inventory read is deprecated.
+              schema:
+                type: string
+                example: 'true'
+            Sunset:
+              description: Proposed sunset date pending Campus Hub agreement.
+              schema:
+                type: string
+                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+            Link:
+              description: Successor-version link to the v2 inventory route.
+              schema:
+                type: string
+                example: '</api/v2/products/1/inventory>; rel="successor-version"'
         "400":
           description: Invalid resource ID or JSON request body, oversized body or unsupported content type
           content:
@@ -1748,8 +1830,397 @@ paths:
               schema:
                 type: integer
                 minimum: 1
-      description: "Live inventory snapshot with Cache-Control: no-store. Stock is not reserved by this read; order
-        creation may still return 409."
+  /api/v1/products:
+    get:
+      tags:
+        - Products & Services
+      summary: List products and services (legacy v1)
+      description: Frozen legacy response shape. Deprecated; use GET /api/v2/products. The unversioned /api/products alias returns the same legacy response.
+      operationId: listProductsV1
+      deprecated: true
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [input, service]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: county
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Legacy product collection shape.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [listings]
+                properties:
+                  listings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+          headers:
+            Deprecation:
+              description: Indicates this legacy product read is deprecated.
+              schema:
+                type: string
+                example: 'true'
+            Sunset:
+              description: Proposed sunset date pending Campus Hub agreement.
+              schema:
+                type: string
+                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+            Link:
+              description: Successor-version link to the v2 product collection.
+              schema:
+                type: string
+                example: '</api/v2/products>; rel="successor-version"'
+        '400':
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid X-API-Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: API key exceeded 120 requests per 60-second window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/products/{id}:
+    get:
+      tags:
+        - Products & Services
+      summary: Get product detail (legacy v1)
+      description: Frozen legacy response shape. Deprecated; use GET /api/v2/products/{id}.
+      operationId: getProductByIdV1
+      deprecated: true
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Legacy product detail response.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [listing]
+                properties:
+                  listing:
+                    $ref: '#/components/schemas/Product'
+          headers:
+            Deprecation:
+              description: Indicates this legacy product read is deprecated.
+              schema:
+                type: string
+                example: 'true'
+            Sunset:
+              description: Proposed sunset date pending Campus Hub agreement.
+              schema:
+                type: string
+                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+            Link:
+              description: Successor-version link to v2 product detail.
+              schema:
+                type: string
+                example: '</api/v2/products/1>; rel="successor-version"'
+        '400':
+          description: Invalid resource ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid X-API-Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: API key exceeded 120 requests per 60-second window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/products/{id}/inventory:
+    get:
+      tags:
+        - Products & Services
+      summary: Read product inventory (legacy v1)
+      description: Frozen legacy response shape. Deprecated; use GET /api/v2/products/{id}/inventory.
+      operationId: getProductInventoryV1
+      deprecated: true
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Legacy inventory response. Cache-Control is no-store.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryStatus'
+          headers:
+            Cache-Control:
+              description: Inventory responses are not cached.
+              schema:
+                type: string
+                example: no-store
+            Deprecation:
+              description: Indicates this legacy inventory read is deprecated.
+              schema:
+                type: string
+                example: 'true'
+            Sunset:
+              description: Proposed sunset date pending Campus Hub agreement.
+              schema:
+                type: string
+                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+            Link:
+              description: Successor-version link to v2 inventory.
+              schema:
+                type: string
+                example: '</api/v2/products/1/inventory>; rel="successor-version"'
+        '400':
+          description: Invalid resource ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid X-API-Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: API key exceeded 120 requests per 60-second window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v2/products:
+    get:
+      tags:
+        - Products API v2
+      summary: List products and services (v2)
+      description: |
+        Campus Hub v2 product collection. Returns `{data, count}`. Product `title` is now `name`, and the
+        duplicate `quantity` field is removed; use `stock`. The existing `kind`, `search`, `county`, and
+        `category` filters are unchanged. This v2 read is served alongside the deprecated legacy route.
+      operationId: listProductsV2
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [input, service]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: county
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product and service listings in the v2 shape.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCollectionV2'
+        '400':
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid X-API-Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: API key exceeded 120 requests per 60-second window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            Retry-After:
+              description: Seconds until the key window resets.
+              schema:
+                type: integer
+                minimum: 1
+
+  /api/v2/products/{id}:
+    get:
+      tags:
+        - Products API v2
+      summary: Get a product or service (v2)
+      description: Returns one offering using the v2 `name` field and no duplicate `quantity` field.
+      operationId: getProductByIdV2
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Product or service in the v2 shape.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailV2'
+        '400':
+          description: Invalid resource ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid X-API-Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: API key exceeded 120 requests per 60-second window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            Retry-After:
+              description: Seconds until the key window resets.
+              schema:
+                type: integer
+                minimum: 1
+
+  /api/v2/products/{id}/inventory:
+    get:
+      tags:
+        - Products API v2
+      summary: Read current inventory (v2)
+      description: Live stock snapshot with no-store cache control. Reads do not reserve stock.
+      operationId: getProductInventoryV2
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Inventory snapshot using `name` and wrapped in `data`.
+          headers:
+            Cache-Control:
+              description: Inventory responses are not cached.
+              schema:
+                type: string
+                example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductInventoryV2'
+        '400':
+          description: Invalid resource ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid X-API-Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: API key exceeded 120 requests per 60-second window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            Retry-After:
+              description: Seconds until the key window resets.
+              schema:
+                type: integer
+                minimum: 1
+
   /api/health:
     get:
       tags:
@@ -2675,6 +3146,121 @@ components:
           type: string
           enum: [ confirmed, fulfilled, cancelled ]
           example: confirmed
+
+    ProductV2:
+      type: object
+      required:
+        - id
+        - ownerId
+        - kind
+        - name
+        - category
+        - price
+        - unit
+        - stock
+        - county
+        - description
+        - createdAt
+        - updatedAt
+        - sellerName
+        - sellerPhone
+        - sellerRole
+      properties:
+        id:
+          type: integer
+          example: 1
+        ownerId:
+          type: integer
+          example: 3
+        kind:
+          type: string
+          enum: [input, service]
+          example: input
+        name:
+          type: string
+          example: Hybrid maize seed
+        category:
+          type: string
+          example: Seeds
+        price:
+          type: number
+          example: 450
+        unit:
+          type: string
+          example: kg
+        stock:
+          type: integer
+          minimum: 0
+          example: 75
+        county:
+          type: string
+          example: Nakuru
+        description:
+          type: string
+          example: Drought-tolerant maize seed suited to mid-altitude regions.
+        createdAt:
+          type: string
+          example: '2026-08-24 17:30:00'
+        updatedAt:
+          type: string
+          example: '2026-08-24 17:30:00'
+        sellerName:
+          type: string
+          example: Rift Farm Supplies
+        sellerPhone:
+          type: string
+          example: '0708 312 908'
+        sellerRole:
+          type: string
+          example: supplier
+
+    ProductCollectionV2:
+      type: object
+      required: [data, count]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductV2'
+        count:
+          type: integer
+          minimum: 0
+          example: 1
+
+    ProductDetailV2:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ProductV2'
+
+    ProductInventoryV2:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, name, stock, unit, inStock, lastUpdated]
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: Hybrid maize seed
+            stock:
+              type: integer
+              minimum: 0
+              example: 75
+            unit:
+              type: string
+              example: kg
+            inStock:
+              type: boolean
+              example: true
+            lastUpdated:
+              type: string
+              example: '2026-08-24 17:30:00'
 
     InventoryStatus:
       type: object

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createSkillBridgeClient } from './skillbridge.js';
+import { getSkillBridgeExpertApi } from './skillbridge-contract.js';
 
 const columns = `id, expert_id AS expertId, expert_name AS expertName, topic, appointment_at AS date,
   submission_state AS submissionState, partner_request_id AS requestId, partner_status AS partnerStatus, created_at AS createdAt`;
@@ -7,6 +8,7 @@ const columns = `id, expert_id AS expertId, expert_name AS expertName, topic, ap
 export function createConsultationRouter({ db, authenticate, ...options }) {
   const router = Router();
   const upstream = createSkillBridgeClient(options);
+  const expertApi = getSkillBridgeExpertApi(options.expertVersion);
   router.use(authenticate);
   router.get('/', async (req, res) => {
     res.json({ consultations: await db.prepare(`SELECT ${columns} FROM consultations WHERE user_id = ? ORDER BY id DESC`).all(req.user.id) });
@@ -20,7 +22,7 @@ export function createConsultationRouter({ db, authenticate, ...options }) {
     }
     const appointment = new Date(date).toISOString();
     const [expert, skills] = await Promise.all([
-      upstream(`/experts/${expertId}`, (x) => x && x.id === expertId && typeof x.name === 'string' && Array.isArray(x.skills) && x.skills.every((s) => typeof s === 'string')),
+      upstream(expertApi.detailPath(expertId), expertApi.parseDetail),
       upstream('/skills?tag=Agriculture', (x) => Array.isArray(x) && x.every((s) => s && typeof s.name === 'string' && typeof s.category === 'string')),
     ]);
     if (!expert.skills.some((name) => skills.some((s) => s.category.toLowerCase() === 'agriculture' && s.name.toLowerCase() === name.toLowerCase()))) return res.status(422).json({ message: 'Choose an agricultural expert.' });

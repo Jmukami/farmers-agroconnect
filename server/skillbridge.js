@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createHash } from 'node:crypto';
 import { fetchWithRetry } from './resilientFetch.js';
+import { getSkillBridgeExpertApi } from './skillbridge-contract.js';
 
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const errorReason = (error) => {
@@ -18,7 +19,6 @@ const responseFreshness = (...values) => {
   const timestamps = (staleEntries.length ? staleEntries : entries).map((entry) => Date.parse(entry.asOf)).filter(Number.isFinite);
   return { stale: staleEntries.length > 0, asOf: new Date(timestamps.length ? (staleEntries.length ? Math.min(...timestamps) : Math.max(...timestamps)) : Date.now()).toISOString() };
 };
-const validExpert = (x) => x && Number.isSafeInteger(x.id) && x.id > 0 && typeof x.name === 'string' && typeof x.estate === 'string' && Number.isFinite(x.rating) && (x.bio === undefined || typeof x.bio === 'string') && (x.latitude === undefined || Number.isFinite(x.latitude)) && (x.longitude === undefined || Number.isFinite(x.longitude)) && Array.isArray(x.skills) && x.skills.every((s) => typeof s === 'string');
 const validSkill = (x) => x && Number.isInteger(x.id) && typeof x.name === 'string' && typeof x.category === 'string';
 const listOf = (check) => (value) => Array.isArray(value) && value.every(check);
 const validReviews = (x) => x && Number.isFinite(x.rating) && ['reviewCount', 'completedSessions'].every((k) => Number.isInteger(x[k]) && x[k] >= 0);
@@ -47,7 +47,9 @@ export function createSkillBridgeClient({ baseUrl = process.env.SKILLBRIDGE_BASE
       }
       let data;
       try { data = await response.json(); } catch { throw fail(502, 'SkillBridge returned an invalid response.'); }
-      if (!validate(data)) throw fail(502, 'SkillBridge returned an unexpected response.');
+      const parsed = validate(data);
+      if (parsed === false || parsed === null || parsed === undefined) throw fail(502, 'SkillBridge returned an unexpected response.');
+      const validatedData = parsed === true ? data : parsed;
       // Project validated upstream data so extra fields never reach consumers.
       const fields = path.startsWith('/experts') && !/\/(reviews|availability)$/.test(path.split('?')[0])
         ? ['id', 'name', 'estate', 'rating', 'bio', 'latitude', 'longitude', 'skills', 'distanceKm']
@@ -56,7 +58,9 @@ export function createSkillBridgeClient({ baseUrl = process.env.SKILLBRIDGE_BASE
             : path.endsWith('/availability') ? ['date', 'startTime', 'durationMinutes']
               : ['requestId', 'status'];
       const project = (item) => Object.fromEntries(fields.filter((key) => item[key] !== undefined).map((key) => [key, item[key]]));
-      const projected = Array.isArray(data) ? data.map(project) : project(data);
+      const projected = parsed === true
+        ? (Array.isArray(validatedData) ? validatedData.map(project) : project(validatedData))
+        : validatedData;
       const asOf = new Date().toISOString();
       if (method === 'GET') {
         lastGood.set(cacheKey, { data: structuredClone(projected), asOf });
@@ -77,6 +81,7 @@ export function createSkillBridgeClient({ baseUrl = process.env.SKILLBRIDGE_BASE
 export function createSkillBridgeRouter(options = {}) {
   const router = Router();
   const get = createSkillBridgeClient(options);
+  const expertApi = getSkillBridgeExpertApi(options.expertVersion);
   router.param('id', (req, _res, next, id) => {
     if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) return next(fail(400, 'Choose a valid expert.'));
     next();
@@ -102,9 +107,9 @@ export function createSkillBridgeRouter(options = {}) {
       if (!lat || !lng || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng)) || Math.abs(Number(lat)) > 90 || Math.abs(Number(lng)) > 180) throw fail(400, 'Provide valid latitude and longitude together.');
     }
     const params = new URLSearchParams({ sort });
-    if (estateFilter) params.set('estate', estateFilter);
+    if (estateFilter) params.set(expertApi.locationQuery, estateFilter);
     if (lat && lng) { params.set('lat', lat); params.set('lng', lng); }
-    const [experts, skills] = await Promise.all([get(`/experts?${params}`, listOf(validExpert)), agriculture()]);
+    const [experts, skills] = await Promise.all([get(`${expertApi.listPath}?${params}`, expertApi.parseList), agriculture()]);
     if (sort === 'proximity' && experts.some((e) => !Number.isFinite(e.distanceKm) || e.distanceKm < 0)) throw fail(502, 'SkillBridge omitted proximity distances.');
     const names = new Set(skills.map((s) => s.name.toLowerCase()));
     const relevant = experts.filter((e) => e.skills.some((s) => names.has(s.toLowerCase())));
@@ -118,7 +123,7 @@ export function createSkillBridgeRouter(options = {}) {
     res.json({ skills, ...responseFreshness(skills) });
   });
   async function expertById(id) {
-    const expert = await get(`/experts/${id}`, validExpert);
+    const expert = await get(expertApi.detailPath(id), expertApi.parseDetail);
     if (expert.id !== Number(id)) throw fail(502, 'SkillBridge returned the wrong expert.');
     const skills = await agriculture();
     if (!expert.skills.some((name) => skills.some((s) => s.name.toLowerCase() === name.toLowerCase()))) throw fail(404, 'This expert does not offer agricultural skills.');

@@ -18,7 +18,7 @@ test('consultations persist success and ambiguous outcomes, isolate users and pr
     onFailure: () => {}, fetchImpl: async (url, options) => {
       assert.equal(options.headers['X-API-Key'], 'test-upstream-key');
       assert.equal(options.headers.Authorization, undefined);
-      if (url.includes('/experts/')) return Response.json({ id: 13, name: 'Agronomist', skills: ['Soil Health'] });
+      if (url.includes('/v2/experts/')) return Response.json({ data: { id: 13, name: 'Agronomist', location: 'Nakuru', rating: 4.8, skills: ['Soil Health'] } });
       if (url.includes('/skills')) return Response.json([{ name: 'Soil Health', category: 'Agriculture' }]);
       writes++;
       assert.equal(JSON.parse(options.body).farmerName, 'Authenticated Farmer');

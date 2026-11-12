@@ -26,6 +26,30 @@ The script prints the actual farmer and product IDs and verifies location, produ
 
 Before handoff, read `/health`, `/farmers`, and `/products`; use returned IDs to read a demo farmer's `/farm-location`, product detail, and `/inventory`. Confirm inventory `stock` equals product `quantity` and `stock`, and that `inStock` is false for the zero-stock fixture. Check browser CORS from the consumer origin. Successful reads confirm deployment independently of historical logs. Published locations for ordinary farmers can still be absent.
 
+## Campus Hub product read versioning
+
+The v2 product read contract is implemented locally in parallel with the existing routes. It is documented in [openapi.yaml](../openapi.yaml) and the draft [deprecation notice](../DEPRECATION_NOTICE.md). The proposed v1 sunset date is **18 November 2026**, pending agreement with Campus Hub. The Render API has not been deployed as part of this local change.
+
+| Need | Existing read (v1) | Versioned read (v2) | v2 response shape |
+| --- | --- | --- | --- |
+| Product catalogue | `GET /products` or `/v1/products` | `GET /v2/products` | `{data: [...], count: N}` |
+| Product details | `GET /products/{id}` or `/v1/products/{id}` | `GET /v2/products/{id}` | `{data: {...}}` |
+| Inventory | `GET /products/{id}/inventory` or `/v1/products/{id}/inventory` | `GET /v2/products/{id}/inventory` | `{data: {id, name, stock, unit, inStock, lastUpdated}}` |
+
+In v2, product `title` is `name`, the duplicate `quantity` response field is removed, and `stock` is canonical. The list filters (`kind`, `search`, `county`, `category`) and API-key authentication stay the same. Product writes remain on the existing paths and still accept `title` and `quantity`.
+
+The legacy product read routes remain available at both the old unversioned path and `/v1`, and return their existing payloads. They send `Deprecation: true`, a proposed `Sunset` date, and a `Link` with `rel="successor-version"`. Do not treat the date as agreed until Campus Hub confirms it and a deployment plan is approved.
+
+Example consumer reads:
+
+```sh
+curl -i -H 'X-API-Key: <consumer-key>' 'https://farmers-agroconnect.onrender.com/api/v2/products?kind=input&county=Nakuru'
+curl -i -H 'X-API-Key: <consumer-key>' 'https://farmers-agroconnect.onrender.com/api/v2/products/1'
+curl -i -H 'X-API-Key: <consumer-key>' 'https://farmers-agroconnect.onrender.com/api/v2/products/1/inventory'
+```
+
+Discover IDs from the current catalogue rather than assuming `1`. V2 routes are currently local until deployed. The old unversioned product **writes** are not deprecated by this notice.
+
 ## Public reads
 
 | Need | Route | Success payload |

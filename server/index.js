@@ -8,6 +8,8 @@ import db from './db.js';
 import { createSkillBridgeRouter } from './skillbridge.js';
 import { createConsultationRouter } from './consultations.js';
 import { createPartnerProviderRouter } from './partner-provider.js';
+import { createProductsV1Router } from './products-v1.js';
+import { createProductsV2Router } from './products-v2.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -19,12 +21,22 @@ if (!jwtSecret || jwtSecret === 'agroconnect-school-project-local-secret') {
 const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(cors((req, callback) => {
   const method = req.method === 'OPTIONS' ? req.headers['access-control-request-method'] : req.method;
-  const publicRead = ['GET', 'HEAD'].includes(method) && /^\/api\/(?:health|farmers(?:\/[^/]+(?:\/farm-location)?)?|products(?:\/[^/]+(?:\/(?:detail|inventory))?)?|produce(?:\/[^/]+(?:\/detail)?)?)$/.test(req.path);
+  const publicRead = ['GET', 'HEAD'].includes(method) && /^\/api\/(?:health|farmers(?:\/[^/]+(?:\/farm-location)?)?|products(?:\/[^/]+(?:\/(?:detail|inventory))?)?|produce(?:\/[^/]+(?:\/detail)?)?|v[12]\/products(?:\/[^/]+(?:\/(?:detail|inventory))?)?)$/.test(req.path);
   callback(null, { origin: publicRead ? '*' : allowedOrigins?.length ? allowedOrigins : process.env.NODE_ENV !== 'production' });
 }));
 app.use('/api', (req, res, next) => {
   if (req.path === '/skillbridge' || req.path.startsWith('/skillbridge/')) return next();
   return monitor(req, res, next);
+});
+const productV1Sunset = new Date('2026-11-26T00:00:00.000Z');
+app.use(['/api/products', '/api/v1/products'], (req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method)) return next();
+  const oldPath = req.originalUrl.split('?')[0].replace(/\/detail$/, '');
+  const successor = oldPath.replace(/^\/api\/(?:v1\/)?products(?=$|\/)/, '/api/v2/products');
+  res.set('Deprecation', 'true');
+  res.set('Sunset', productV1Sunset.toUTCString());
+  res.set('Link', `<${successor}>; rel="successor-version"`);
+  return next();
 });
 app.use('/api', createApiProtection());
 app.use('/api', (req, res, next) => {
@@ -139,9 +151,11 @@ async function ownerOrNotFound(req, res, table, id) {
 
 app.get('/api/stats', statsHandler);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
-app.use('/api/skillbridge', createSkillBridgeRouter());
-app.use('/api/skillbridge/requests', createConsultationRouter({ db, authenticate }));
+app.use('/api/skillbridge', createSkillBridgeRouter({ expertVersion: process.env.SKILLBRIDGE_EXPERTS_VERSION }));
+app.use('/api/skillbridge/requests', createConsultationRouter({ db, authenticate, expertVersion: process.env.SKILLBRIDGE_EXPERTS_VERSION }));
 app.use('/api', createPartnerProviderRouter({ db, authenticate, listingSelect }));
+app.use('/api/v1', createProductsV1Router({ db, listingSelect }));
+app.use('/api/v2', createProductsV2Router({ db, listingSelect }));
 
 app.param('id', (req, res, next, id) => {
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) return sendError(res, 400, 'Use a positive integer resource ID.');

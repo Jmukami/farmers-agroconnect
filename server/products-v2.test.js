@@ -58,7 +58,7 @@ test('product v2 reads use the canonical shape while legacy reads stay stable an
     const legacy = await read('/api/products');
     assert.equal(legacy.status, 200);
     assert.equal(legacy.headers.get('deprecation'), 'true');
-    assert.equal(legacy.headers.get('sunset'), 'Wed, 18 Nov 2026 00:00:00 GMT');
+    assert.equal(legacy.headers.get('sunset'), 'Mon, 30 Nov 2026 00:00:00 GMT');
     assert.equal(legacy.headers.get('link'), '</api/v2/products>; rel="successor-version"');
     const legacyBody = await legacy.json();
     assertContract('/products', 'GET', 200, legacyBody);
@@ -72,7 +72,7 @@ test('product v2 reads use the canonical shape while legacy reads stay stable an
     const explicitV1 = await read('/api/v1/products');
     assert.equal(explicitV1.status, 200);
     assert.equal(explicitV1.headers.get('deprecation'), 'true');
-    assert.equal(explicitV1.headers.get('sunset'), 'Wed, 18 Nov 2026 00:00:00 GMT');
+    assert.equal(explicitV1.headers.get('sunset'), 'Mon, 30 Nov 2026 00:00:00 GMT');
     assert.equal(explicitV1.headers.get('link'), '</api/v2/products>; rel="successor-version"');
     const explicitV1Body = await explicitV1.json();
     assertContract('/v1/products', 'GET', 200, explicitV1Body);

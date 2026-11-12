@@ -7,9 +7,11 @@
 
 **Change:** add parallel v2 product catalogue, detail, and inventory reads under `/api/v2/products`, preserving the unversioned and explicit `/api/v1/products` legacy reads; v2 wraps payloads in `data`, names offerings with `name`, and uses only `stock` for product inventory.
 
-**Why the break is worthwhile:** v1 product responses duplicate inventory in `quantity` and `stock`, use `title` where consumers describe a product name, and use different top-level wrappers for list, detail, and inventory responses. V2 gives Campus Hub one consistent response envelope and one canonical product inventory field while preserving v1 for migration.
+**Why the break is worthwhile:** v1 product responses duplicate inventory in `quantity` and `stock`, use `title` where consumers describe a product name, and use different top-level wrappers for list, detail, and inventory responses. V2 gives product consumers one consistent response envelope and one canonical product inventory field while preserving v1 for migration. Campus Hub later clarified that it does not consume `/products`, so this product change does not require action from Campus Hub.
 
-**Predicted consumer break:** Campus Hub code that reads `listing.title` will need to read `product.name`; code that reads `listing.quantity` will need to read `product.stock`; code iterating the top-level `listings` array will need `data`. The Campus Hub source is not in this repository, so its exact file and line are unknown. Ask Team 7 to confirm the specific locations before treating this prediction as exact.
+**Consumer clarification:** Our initial prediction about Campus Hub reading product `title`, `quantity`, or `listings` was incorrect. Campus Hub confirmed its integration calls `GET /produce` and `GET /farmers`, and its `/produce` proxy maps `title` and `quantity`; `PartnerProduce.jsx` displays both. It does not read these fields from `/products`. AgroConnect is not deprecating `/produce` or `/farmers`, so Campus Hub needs no migration for this notice.
+
+**Other questions answered:** Campus Hub proposed 30 November 2026 for any product v1 sunset and requested no breaking changes from 18 through 20 November. The date remains unagreed. The v2 product routes are local only; Render has not been updated, so no hosted v2 URL/test key is available. An unauthenticated hosted `curl -i` returned 401 without `Deprecation`, `Sunset`, or `Link`; no authenticated hosted response was captured. The exact post-sunset status/body has not been committed. `POST /api/orders` continues to accept `{items: [{id, type, quantity}]}` with `type` equal to `produce` or `product`.
 
 ## Upstream change: SkillBridge
 

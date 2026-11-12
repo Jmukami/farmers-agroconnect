@@ -28,7 +28,7 @@ app.use('/api', (req, res, next) => {
   if (req.path === '/skillbridge' || req.path.startsWith('/skillbridge/')) return next();
   return monitor(req, res, next);
 });
-const productV1Sunset = new Date('2026-11-26T00:00:00.000Z');
+const productV1Sunset = new Date('2026-11-30T00:00:00.000Z');
 app.use(['/api/products', '/api/v1/products'], (req, res, next) => {
   if (!['GET', 'HEAD'].includes(req.method)) return next();
   const oldPath = req.originalUrl.split('?')[0].replace(/\/detail$/, '');

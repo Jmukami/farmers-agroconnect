@@ -21,10 +21,11 @@ info:
     internally and our downstream integration partners: **Campus Hub** (Team 7).
 
 
-    Campus Hub product catalogue reads have a parallel v2 contract at /api/v2/products. The existing
-    /api/products reads remain available during the proposed migration window and send Deprecation,
-    Sunset, and successor-version Link headers. The proposed sunset date is 2026-11-26 and is not yet
-    agreed with Campus Hub. Product write routes remain unchanged in this rollout.
+    Product catalogue reads have a parallel v2 contract at /api/v2/products. Campus Hub clarified
+    on 2026-11-12 that its integration calls /produce and /farmers, not /products; this product
+    migration therefore requires no action from Campus Hub. The legacy product routes remain available
+    locally and have draft Deprecation, Sunset, and successor-version Link headers. The proposed
+    sunset date is 2026-11-30 and is not agreed; Render has not been updated. Product writes remain unchanged.
   version: 1.0.0
   license:
     name: MIT
@@ -43,13 +44,13 @@ tags:
   - name: Authentication
     description: User registration, login, and session validation
   - name: Farmers
-    description: Public farmer directory and contact discovery (Downstream for Campus Hub Need 1 & 2)
+    description: Public farmer directory and contact discovery (consumed by Campus Hub)
   - name: Produce Listings
     description: Farmer-owned agricultural harvest produce marketplace
   - name: Products & Services
-    description: Farm inputs, equipment, and agricultural service catalog (Downstream for Campus Hub Need 3 & 4)
+    description: Farm inputs, equipment, and agricultural service catalog
   - name: Products API v2
-    description: Versioned Campus Hub product catalogue, detail, and inventory reads
+    description: Versioned product catalogue, detail, and inventory reads
   - name: Orders
     description: Multi-item purchasing, transactional checkout, and order status workflow
   - name: SkillBridge
@@ -881,10 +882,10 @@ paths:
       summary: List farm inputs and services
       description: |
         Retrieves a catalog of farm inputs and agricultural services with stock levels.
-        **Downstream Mapping**: Fulfills Campus Hub Need 3 (read product information) and Need 4 (access inventory details).
-        This legacy read remains available while Campus Hub migrates to `/api/v2/products`. Its responses include
-        `Deprecation: true`, `Sunset: Wed, 18 Nov 2026 00:00:00 GMT`, and a `Link` header for the successor route.
-        The date is proposed and must be agreed with Campus Hub. Product write operations are unchanged.
+        **Downstream Mapping**: Product catalogue read. Campus Hub clarified on 2026-11-12 that it calls `/produce` and `/farmers`, not this route.
+        This legacy read remains available while product consumers evaluate `/api/v2/products`. Its local responses include
+        `Deprecation: true`, `Sunset: Mon, 30 Nov 2026 00:00:00 GMT`, and a `Link` header for the successor route.
+        The date is proposed and unagreed. Render has not been updated. Product write operations are unchanged.
       operationId: listProducts
       deprecated: true
       security:
@@ -940,7 +941,7 @@ paths:
               description: Proposed date for ending the legacy product read; pending Campus Hub agreement.
               schema:
                 type: string
-                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+                example: 'Mon, 30 Nov 2026 00:00:00 GMT'
             Link:
               description: Successor-version link to the versioned product collection.
               schema:
@@ -1187,7 +1188,7 @@ paths:
       tags:
         - Products & Services
       summary: Get product offering by ID (legacy v1)
-      description: Deprecated Campus Hub read. Responses include Deprecation, Sunset, and a successor-version Link header; use GET /api/v2/products/{id}.
+      description: Deprecated product read. Campus Hub has clarified it does not call this route. Local responses include Deprecation, Sunset, and a successor-version Link header; use GET /api/v2/products/{id}.
       operationId: getProductById
       deprecated: true
       security:
@@ -1221,7 +1222,7 @@ paths:
               description: Proposed sunset date pending Campus Hub agreement.
               schema:
                 type: string
-                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+                example: 'Mon, 30 Nov 2026 00:00:00 GMT'
             Link:
               description: Successor-version link to the v2 product detail route.
               schema:
@@ -1665,7 +1666,7 @@ paths:
               description: Proposed sunset date pending Campus Hub agreement.
               schema:
                 type: string
-                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+                example: 'Mon, 30 Nov 2026 00:00:00 GMT'
             Link:
               description: Successor-version link to the canonical v2 product detail route.
               schema:
@@ -1765,7 +1766,7 @@ paths:
       tags:
         - Products & Services
       summary: Read current product inventory (legacy v1)
-      description: Deprecated Campus Hub read. Migrate to GET /api/v2/products/{id}/inventory; responses include Deprecation, Sunset, and successor-version Link headers. Inventory responses use no-store cache control and do not reserve stock.
+      description: Deprecated product read. Campus Hub has clarified it does not call this route. Migrate to GET /api/v2/products/{id}/inventory; local responses include Deprecation, Sunset, and successor-version Link headers. Inventory responses use no-store cache control and do not reserve stock.
       operationId: getProductInventory
       deprecated: true
       security:
@@ -1794,7 +1795,7 @@ paths:
               description: Proposed sunset date pending Campus Hub agreement.
               schema:
                 type: string
-                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+                example: 'Mon, 30 Nov 2026 00:00:00 GMT'
             Link:
               description: Successor-version link to the v2 inventory route.
               schema:
@@ -1881,7 +1882,7 @@ paths:
               description: Proposed sunset date pending Campus Hub agreement.
               schema:
                 type: string
-                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+                example: 'Mon, 30 Nov 2026 00:00:00 GMT'
             Link:
               description: Successor-version link to the v2 product collection.
               schema:
@@ -1944,7 +1945,7 @@ paths:
               description: Proposed sunset date pending Campus Hub agreement.
               schema:
                 type: string
-                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+                example: 'Mon, 30 Nov 2026 00:00:00 GMT'
             Link:
               description: Successor-version link to v2 product detail.
               schema:
@@ -2014,7 +2015,7 @@ paths:
               description: Proposed sunset date pending Campus Hub agreement.
               schema:
                 type: string
-                example: 'Wed, 18 Nov 2026 00:00:00 GMT'
+                example: 'Mon, 30 Nov 2026 00:00:00 GMT'
             Link:
               description: Successor-version link to v2 inventory.
               schema:

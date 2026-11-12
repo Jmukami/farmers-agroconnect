@@ -48,7 +48,7 @@ test('API validation, atomic stock handling, seller isolation and migration', as
     assert.equal(catalog[0].quantity, catalog[0].stock);
     const legacyCatalogResponse = await fetch(`http://127.0.0.1:${port}/api/products`, { headers: { 'X-API-Key': 'isolated-api-test-key' } });
     assert.equal(legacyCatalogResponse.headers.get('deprecation'), 'true');
-    assert.equal(legacyCatalogResponse.headers.get('sunset'), 'Wed, 18 Nov 2026 00:00:00 GMT');
+    assert.equal(legacyCatalogResponse.headers.get('sunset'), 'Mon, 30 Nov 2026 00:00:00 GMT');
     assert.equal(legacyCatalogResponse.headers.get('link'), '</api/v2/products>; rel="successor-version"');
     await legacyCatalogResponse.arrayBuffer();
     const newCatalog = (await request('/v2/products')).data;

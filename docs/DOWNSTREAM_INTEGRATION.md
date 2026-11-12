@@ -28,7 +28,7 @@ Before handoff, read `/health`, `/farmers`, and `/products`; use returned IDs to
 
 ## Campus Hub product read versioning
 
-The v2 product read contract is implemented locally in parallel with the existing routes. It is documented in [openapi.yaml](../openapi.yaml) and the draft [deprecation notice](../DEPRECATION_NOTICE.md). The proposed v1 sunset date is **18 November 2026**, pending agreement with Campus Hub. The Render API has not been deployed as part of this local change.
+The v2 product read contract is implemented locally in parallel with the existing routes. It is documented in [openapi.yaml](../openapi.yaml) and the draft [deprecation notice](../DEPRECATION_NOTICE.md). Campus Hub clarified on 12 November that its integration calls `/produce` and `/farmers`, not `/products`; this product migration therefore requires no action from Campus Hub. Campus Hub proposed 30 November for any product v1 sunset and requested no breaking changes from 18 through 20 November. The date remains unagreed and the Render API has not been deployed as part of this local change.
 
 | Need | Existing read (v1) | Versioned read (v2) | v2 response shape |
 | --- | --- | --- | --- |
@@ -38,7 +38,7 @@ The v2 product read contract is implemented locally in parallel with the existin
 
 In v2, product `title` is `name`, the duplicate `quantity` response field is removed, and `stock` is canonical. The list filters (`kind`, `search`, `county`, `category`) and API-key authentication stay the same. Product writes remain on the existing paths and still accept `title` and `quantity`.
 
-The legacy product read routes remain available at both the old unversioned path and `/v1`, and return their existing payloads. They send `Deprecation: true`, a proposed `Sunset` date, and a `Link` with `rel="successor-version"`. Do not treat the date as agreed until Campus Hub confirms it and a deployment plan is approved.
+The legacy product read routes remain available at both the old unversioned path and `/v1`, and return their existing payloads. The local implementation sends `Deprecation: true`, a proposed `Sunset` date, and a `Link` with `rel="successor-version"`. An unauthenticated hosted probe returned 401 without those headers, confirming the Render backend has not deployed the change. No authenticated hosted response or exact post-sunset status/body is currently available.
 
 Example consumer reads:
 

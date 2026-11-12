@@ -3,11 +3,11 @@
 **To:** Campus Hub (Team 7)  
 **From:** AgroConnect (Team 6)  
 **Date:** 12 November 2026  
-**Status:** Draft for partner review; the sunset date below is proposed, not agreed.
+**Status:** Scope clarification received 12 November 2026. This product notice does not apply to Campus Hub's stated `/produce` and `/farmers` integration. The proposed date below remains unagreed and applies only to product reads.
 
 ## Summary
 
-The legacy product catalogue, product detail, and inventory **read** routes are deprecated. The old unversioned paths and explicit `/api/v1/products` aliases return the same frozen v1 shape. Their v2 replacements are live locally at `/api/v2/products`. The proposed sunset for v1 reads is **16 November 2026**, subject to Campus Hub agreement. The deployed Render service will not change until this rollout is reviewed and deployed.
+This draft covers only AgroConnect's product catalogue, product detail, and inventory **read** routes: `/api/products...` and `/api/v1/products...`. Campus Hub has confirmed it calls `/produce` and `/farmers`, not `/products`; those routes are out of scope and require no action under this notice. The product v2 replacements exist locally at `/api/v2/products` and are not deployed. Campus Hub proposed **30 November 2026** for the product v1 sunset and requested no breaking changes from 18 through 20 November. AgroConnect has recorded that proposal, but the date and rollout are not agreed or deployed.
 
 ## What is changing
 
@@ -65,11 +65,11 @@ The examples show only the changed fields; the full property set is in [openapi.
 ## Timeline
 
 - 12 November 2026: v2 contract and handlers prepared locally; v1 remains available.
-- Proposed 16 November 2026: v1 product reads may be retired after Campus Hub confirms its migration and the date is agreed.
+- Proposed 30 November 2026: product v1 reads may be retired only after scope, migration, and date are agreed. Campus Hub says it does not consume these routes.
 - No v1 shutdown is scheduled by this draft. The hosted API must be deployed and the sunset date agreed before the timeline becomes binding.
 
-Legacy product read responses from both `/api/v1/products...` and the old unversioned `/api/products...` paths carry `Deprecation`, `Sunset`, and `Link` headers. The Link header points to the matching v2 route.
+The local implementation adds `Deprecation`, `Sunset`, and successor `Link` headers to legacy product reads. A hosted unauthenticated probe on 12 November 2026 returned 401 and did **not** include these headers; the response body was `{"message":"A valid X-API-Key header is required."}`. This confirms Render has not deployed the local header change. No authenticated hosted response was captured. No exact post-sunset status/body is committed yet. The current local and hosted product routes continue to respond normally unless a later reviewed deployment changes that behavior.
 
 ## Questions
 
-Please confirm which Campus Hub client fields currently read `title` and `quantity`, whether the proposed sunset date is workable, and whether any additional consumer needs to be covered. AgroConnect will update this notice after that review.
+Campus Hub clarified that its `/produce` proxy maps `title` and `quantity`, and `PartnerProduce.jsx` displays both; it does not read those fields from `/products`. Therefore this notice does not require Campus Hub code changes. `/produce` and `/farmers` remain unchanged. The proposed 30 November date applies only to product reads and remains subject to agreement with any product consumer.

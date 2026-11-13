@@ -22,4 +22,4 @@ On another note, if possible I would change my teammates
 
 ## My contribution. Rate your own contribution honestly and explain it. What did you own? Where did you carry others, and where did others carry you? 
 
-I would rate my contribution a 9/10 simply because I contributed 90% of the work done from documentation, building, testing, communication with both our partners, integration. Granted, my team mostly helped in the beginning when planning but after that it was all me and this can be backed up by the contribution graph on Github.
+I would rate my contribution a 9/10 simply because I contributed 90% of the work done from documentation, building, testing, communication with both our partners, integration. Granted, my team mostly helped in the beginning when planning but after that it was all me and this can be backed up by the stats in the [Contribution Report](contribution-report.md) where both `Emmanuel` and `Emmanuel Abelle` belong to yours truly.
